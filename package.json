@@ -1,0 +1,28 @@
+{
+  "name": "cloudform2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel-preset-flow": "^6.23.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-jest": "^23.0.0-alpha.0",
+    "babel-loader": "^7.1.4",
+    "babel-preset-env": "^1.6.1",
+    "flow": "^0.2.3",
+    "flow-bin": "^0.68.0",
+    "jest": "^22.4.2",
+    "regenerator-runtime": "^0.11.1",
+    "webpack": "^4.1.1",
+    "webpack-cli": "^2.0.12"
+  }
+}
