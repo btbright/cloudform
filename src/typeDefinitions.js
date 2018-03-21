@@ -2,9 +2,15 @@
 import specData from "../data/spec.json";
 
 export type ResourceType = {
-  Properties: { [key: string]: ResourceProperty },
-  Attributes: { [key: string]: AttributeProperty }
+  Properties: PropertyCollection<ResourceProperty>,
+  Attributes: PropertyCollection<AttributeProperty>
 };
+
+export type PropertyType = {
+  Properties: PropertyCollection<ResourceProperty>
+};
+
+export type PropertyCollection<T> = { [key: string]: T };
 
 type AttributeProperty = {
   ItemType: ?string,
@@ -13,7 +19,7 @@ type AttributeProperty = {
   Type: ?string
 };
 
-type ResourceProperty = {
+export type ResourceProperty = {
   Required: boolean,
   DuplicatesAllowed: ?boolean,
   ItemType: ?string,
@@ -26,6 +32,13 @@ export function getResourceTypeDefinition(
   resourceTypeKey: string
 ): ResourceType {
   const compactType = specData.r[resourceTypeKey];
+  return parseCompactResourceType(compactType);
+}
+
+export function getPropertyTypeDefinition(
+  propertyTypeKey: string
+): PropertyType {
+  const compactType = specData.p[propertyTypeKey];
   return parseCompactResourceType(compactType);
 }
 
