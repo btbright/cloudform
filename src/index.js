@@ -1,16 +1,15 @@
 // @flow
+import { isArray, curry } from "lodash";
 import {
-  getResourceTypeDefinition,
-  getPropertyTypeDefinition
-} from "./typeDefinitions";
-import { isArray } from "lodash";
+  getResourceSpecification,
+  getPropertySpecification
+} from "./specifications";
 import { isArrayReturningFunction } from "./intrinsicFunctions";
 import type {
-  ResourceType,
-  PropertyCollection,
-  ResourceProperty,
-  PropertyType
-} from "./typeDefinitions";
+  PropertiesCollection,
+  Specification,
+  ResourceProperties
+} from "./specifications";
 
 type TemplateError = {
   errorString: string
@@ -18,55 +17,134 @@ type TemplateError = {
 
 type Resource = {
   Type: string,
-  Properties: { [key: string]: mixed },
-  Attributes: { [key: string]: mixed }
+  Properties: PropertiesCollection<mixed>,
+  Attributes: ?PropertiesCollection<mixed>
 };
 
-type Validator<T: ResourceType | PropertyType> = (
-  PropertyCollection<mixed>,
+type Validator = (
+  PropertiesCollection<mixed>,
   string,
-  T
+  Specification
 ) => Array<TemplateError>;
 
-export function getResourceErrors(resource: any) {
-  const typeDefinition = getResourceTypeDefinition(resource.Type);
-  return validateProperties(resource.Properties, resource.Type, typeDefinition);
+const propertyValidators: Array<Validator> = [
+  getMissingRequiredPropertiesErrors,
+  getUnknownPropertiesErrors,
+  getInvalidPropertiesErrors
+];
+
+export function getResourceErrors(resource: Resource) {
+  const specification = getResourceSpecification(resource.Type);
+  return validateProperties(resource.Properties, resource.Type, specification);
 }
 
-function validateProperties<T: ResourceType | PropertyType>(
-  properties: PropertyCollection<mixed>,
-  resourceType: string,
-  typeDefinition: T
+function validateProperties(
+  properties: PropertiesCollection<mixed>,
+  resourceTypeName: string,
+  specification: Specification
 ): Array<TemplateError> {
-  const validators: Array<Validator<ResourceType | PropertyType>> = [
-    getMissingRequiredPropertiesErrors,
-    getUnknownPropertiesErrors,
-    getInvalidPropertiesErrors
-  ];
-  return validators.reduce((errors, validator) => {
-    return [...errors, ...validator(properties, resourceType, typeDefinition)];
+  return propertyValidators.reduce((errors, validator) => {
+    return [
+      ...errors,
+      ...validator(properties, resourceTypeName, specification)
+    ];
   }, []);
 }
 
-function getInvalidPropertiesErrors<T: ResourceType | PropertyType>(
-  properties: PropertyCollection<mixed>,
-  resourceType: string,
-  typeDefinition: T
+type ErrorGenerator = (propertyName: string) => TemplateError;
+type ErrorGeneratorGenerator = (resourceTypeName: string) => ErrorGenerator;
+
+const makeResourceError = (errorString: string) => ({ errorString });
+
+const makeUnknownPropertyErrorGenerator = curry(
+  (resourceTypeName: string, propertyName: string) =>
+    makeResourceError(
+      `Type ${resourceTypeName} contains invalid property: ${propertyName}`
+    )
+);
+
+function getUnknownPropertiesErrors(
+  properties: PropertiesCollection<mixed>,
+  resourceTypeName: string,
+  specification: Specification
+): Array<TemplateError> {
+  if (typeof properties !== "object" || properties === null)
+    return [{ errorString: "invalid" }];
+  const errorGenerator = makeUnknownPropertyErrorGenerator(resourceTypeName);
+  return getKeys(properties).reduce(
+    addMissingPropertyError(
+      resourceTypeName,
+      specification.Properties,
+      errorGenerator
+    ),
+    []
+  );
+}
+
+//flow wanted this... not sure why
+function getKeys(properties: PropertiesCollection<mixed>): string[] {
+  return Object.keys(properties);
+}
+
+const makeMissingPropertyErrorGenerator = curry(
+    (resourceTypeName: string, propertyName: string) =>
+      makeResourceError(
+        `Type ${resourceTypeName} contains invalid property: ${propertyName}`
+      )
+  );
+
+function getMissingRequiredPropertiesErrors(
+  properties: PropertiesCollection<mixed>,
+  resourceTypeName: string,
+  specification: Specification
+): Array<TemplateError> {
+  if (typeof properties !== "object" || properties === null)
+    return [{ errorString: "invalid" }];
+  const errorGenerator = makeMissingPropertyErrorGenerator(resourceTypeName);
+  return getRequiredPropertyNames(specification).reduce(
+    addMissingPropertyError(resourceTypeName, properties, errorGenerator),
+    []
+  );
+}
+
+function addMissingPropertyError<T>(
+  resourceTypeName: string,
+  properties: PropertiesCollection<T>,
+  errorGenerator: ErrorGenerator
+) {
+  return (errors: Array<TemplateError>, propertyName: string) => {
+    if (!properties.hasOwnProperty(propertyName)) {
+      errors.push(errorGenerator(propertyName));
+    }
+    return errors;
+  };
+}
+
+function getRequiredPropertyNames(specification: Specification): string[] {
+  return Object.keys(specification.Properties).filter(
+    propertyKey => specification.Properties[propertyKey].Required
+  );
+}
+
+function getInvalidPropertiesErrors(
+  properties: PropertiesCollection<mixed>,
+  resourceTypeName: string,
+  specification: Specification
 ): Array<TemplateError> {
   if (typeof properties !== "object" || properties === null)
     return [{ errorString: "invalid" }];
   return Object.keys(properties).reduce((errors, propertyKey: string) => {
     //ignore missing properties
-    if (!typeDefinition.Properties.hasOwnProperty(propertyKey)) return errors;
+    if (!specification.Properties.hasOwnProperty(propertyKey)) return errors;
     const property = properties[propertyKey];
-    const propertyDefinition = typeDefinition.Properties[propertyKey];
+    const propertyDefinition = specification.Properties[propertyKey];
 
     if (
       !!propertyDefinition.PrimitiveType &&
       !isPrimitiveTypeValueValid(property, propertyDefinition.PrimitiveType)
     ) {
       errors.push({
-        errorString: `Type ${resourceType} has invalid ${propertyKey}: ${typeof property} found instead of ${
+        errorString: `Type ${resourceTypeName} has invalid ${propertyKey}: ${typeof property} found instead of ${
           propertyDefinition.PrimitiveType
         }`
       });
@@ -81,7 +159,7 @@ function getInvalidPropertiesErrors<T: ResourceType | PropertyType>(
       )
     ) {
       errors.push({
-        errorString: `Type ${resourceType} has invalid ${propertyKey}: should be a list that contains ${
+        errorString: `Type ${resourceTypeName} has invalid ${propertyKey}: should be a list that contains ${
           propertyDefinition.PrimitiveItemType
         }`
       });
@@ -96,7 +174,7 @@ function getInvalidPropertiesErrors<T: ResourceType | PropertyType>(
       )
     ) {
       errors.push({
-        errorString: `Type ${resourceType} has invalid ${propertyKey}: should be a map that contains ${
+        errorString: `Type ${resourceTypeName} has invalid ${propertyKey}: should be a map that contains ${
           propertyDefinition.PrimitiveItemType
         }`
       });
@@ -109,7 +187,7 @@ function getInvalidPropertiesErrors<T: ResourceType | PropertyType>(
     ) {
       const subErrors = getTypedPropertyErrors(
         property,
-        resourceType,
+        resourceTypeName,
         propertyDefinition.Type
       );
       errors = [...errors, ...subErrors];
@@ -121,13 +199,15 @@ function getInvalidPropertiesErrors<T: ResourceType | PropertyType>(
 
 function getTypedPropertyErrors(
   value: mixed,
-  resourceType: string,
+  resourceTypeName: string,
   typeName: string
 ): Array<TemplateError> {
-  const propertyType = getPropertyTypeDefinition(`${resourceType}.${typeName}`);
+  const propertySpecification = getPropertySpecification(
+    `${resourceTypeName}.${typeName}`
+  );
   if (typeof value !== "object" || value === null)
     return [{ errorString: `Invalid type ... more dat` }];
-  return validateProperties(value, resourceType, propertyType);
+  return validateProperties(value, resourceTypeName, propertySpecification);
 }
 
 function arePrimitiveMapValuesValid(
@@ -179,49 +259,4 @@ function makeNormalizedPrimitiveTypeName(typeName: ?string): string {
     default:
       return loweredTypeName;
   }
-}
-
-function getUnknownPropertiesErrors<T: ResourceType | PropertyType>(
-  properties: PropertyCollection<mixed>,
-  resourceType: string,
-  typeDefinition: T
-): Array<TemplateError> {
-  if (typeof properties !== "object" || properties === null)
-    return [{ errorString: "invalid" }];
-  return Object.keys(properties).reduce((errors, propertyKey: string) => {
-    if (!typeDefinition.Properties.hasOwnProperty(propertyKey)) {
-      errors.push({
-        errorString: `Type ${resourceType} contains invalid property: ${propertyKey}`
-      });
-    }
-    return errors;
-  }, []);
-}
-
-function getMissingRequiredPropertiesErrors<T: ResourceType | PropertyType>(
-  properties: PropertyCollection<mixed>,
-  resourceType: string,
-  typeDefinition: T
-): Array<TemplateError> {
-  return getRequiredPropertyNames(typeDefinition).reduce(
-    (errors, propertyKey: string) => {
-      if (typeof properties !== "object" || properties === null)
-        return [{ errorString: "invalid" }];
-      if (!properties.hasOwnProperty(propertyKey)) {
-        errors.push({
-          errorString: `Type ${resourceType} missing required property: ${propertyKey}`
-        });
-      }
-      return errors;
-    },
-    []
-  );
-}
-
-function getRequiredPropertyNames(
-  typeDefinition: ResourceType | PropertyType
-): string[] {
-  return Object.keys(typeDefinition.Properties).filter(
-    propertyKey => typeDefinition.Properties[propertyKey].Required
-  );
 }
