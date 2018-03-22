@@ -189,3 +189,19 @@ test("it finds a missing property on a typed property item in a list", () => {
 
   expect(getErrors(resource).length).toBe(1);
 });
+
+test("it finds an invalid typed property item in a map", () => {
+  const resource = {
+    Type: "AWS::SSM::Association",
+    Properties: {
+      Name: "Test",
+      Parameters: {
+        Test: {
+          ParameterValues: [true]
+        }
+      }
+    }
+  };
+
+  expect(getErrors(resource).length).toBe(1);
+});

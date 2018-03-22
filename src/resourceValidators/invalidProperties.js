@@ -9,15 +9,19 @@ import type {
 import { makeResourceError, prependPath } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
 import { getPropertyIntersectionError, getPropertyErrors } from "./";
-import { getPropertiesCollectionErrors } from "../resource"
-import { isArrayReturningFunction, isIntrinsicFunction } from "../intrinsicFunctions";
+import { getPropertiesCollectionErrors } from "../resource";
+import {
+  isArrayReturningFunction,
+  isIntrinsicFunction
+} from "../intrinsicFunctions";
 
 const validators = [
   getPrimitivePropertyErrors,
   getPrimitiveListErrors,
   getPrimitiveMapErrors,
   getTypedPropertyErrors,
-  getTypedListPropertyErrors
+  getTypedListPropertyErrors,
+  getTypedMapPropertyErrors
 ];
 
 //checks all properties to ensure they match the specification
@@ -140,7 +144,7 @@ const makeInvalidListPropertyError = (
     `Should be a list with values of type '${unwrap(
       correctType
     )} but got property of type '${instanceType}'`,
-    "InvalidListPropertyproperty"
+    "InvalidListProperty"
   );
 
 function hasPrimitiveListError(
@@ -189,9 +193,6 @@ const makeInvalidTypedPropertyError = instanceType =>
     "InvalidTypedProperty"
   );
 
-
-//note - this recursively calls getPropertiesErrors
-//to check nested type meets all properties requirements
 function getTypedListPropertyErrors(
   propertySpecification: ResourceProperties,
   property: mixed,
@@ -205,14 +206,22 @@ function getTypedListPropertyErrors(
       `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
     );
     if (!isArrayReturningFunction(property) && !Array.isArray(property))
-      return [makeInvalidTypedListPropertyError(unwrap(propertySpecification.ItemType), typeof property)];
+      return [
+        makeInvalidTypedListPropertyError(
+          unwrap(propertySpecification.ItemType),
+          typeof property
+        )
+      ];
     if (isArrayReturningFunction(property)) return []; // not handling this right now
-    return property.reduce((errors, item) => {
-      return [...errors, ...getPropertiesCollectionErrors(
-        item,
-        propertyTypeSpecification,
-        resourceTypeName
-      )]
+    return property.reduce((errors, item, i) => {
+      return [
+        ...errors,
+        ...getPropertiesCollectionErrors(
+          item,
+          propertyTypeSpecification,
+          resourceTypeName
+        ).map(prependPath(`[${i}]`))
+      ];
     }, []);
   }
   return [];
@@ -222,6 +231,48 @@ const makeInvalidTypedListPropertyError = (itemType, instanceType) =>
   makeResourceError(
     `Should be a list of '${itemType}' but found a '${instanceType}'`,
     "InvalidTypedListProperty"
+  );
+
+function getTypedMapPropertyErrors(
+  propertySpecification: ResourceProperties,
+  property: mixed,
+  resourceTypeName: string
+): Array<TemplateError> {
+  if (
+    !!propertySpecification.ItemType &&
+    propertySpecification.Type === "Map"
+  ) {
+    const propertyTypeSpecification = getPropertySpecification(
+      `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
+    );
+    if (typeof property !== "object")
+      return [
+        makeInvalidTypedMapPropertyError(
+          unwrap(propertySpecification.ItemType),
+          typeof property
+        )
+      ];
+
+    return Object.keys(property)
+      .reduce((errors, itemKey) => {
+        const item = property[itemKey];
+        return [
+          ...errors,
+          ...getPropertiesCollectionErrors(
+            item,
+            propertyTypeSpecification,
+            resourceTypeName
+          ).map(prependPath(itemKey))
+        ];
+      }, []);
+  }
+  return [];
+}
+
+const makeInvalidTypedMapPropertyError = (itemType, instanceType) =>
+  makeResourceError(
+    `Should be a map with values of '${itemType}' but found a '${instanceType}'`,
+    "InvalidTypedMapProperty"
   );
 
 /*
@@ -267,7 +318,6 @@ function isPrimitiveTypeValueValid(
   }
   return typeof property === normalizedTypeName;
 }
-
 
 function makeNormalizedPrimitiveTypeName(typeName: ?string): string {
   if (typeof typeName !== "string") {

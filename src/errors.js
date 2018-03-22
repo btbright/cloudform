@@ -13,5 +13,9 @@ export const makeResourceError = (
 ) => ({ errorString, type, path: path || "" });
 
 export const prependPath = curry((path, error) =>
-  Object.assign({}, error, { path: `${path}${error.path !== "" && path.indexOf("[") === -1 ? "." : ""}${error.path}` })
+  Object.assign({}, error, {
+    path: `${path}${error.path !== "" && error.path[0] !== "[" ? "." : ""}${
+      error.path
+    }`
+  })
 );
