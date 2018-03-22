@@ -24,14 +24,13 @@ type PropertyValidator = (property: {[key: string]: mixed},
   resourceTypeName: string,
   specification: Specification) => TemplateError[]
 
-type ResourceValidator = (resource: Resource, specification: Specification) => TemplateError[]
+type PropertiesValidator = (properties: PropertiesValidator<mixed>, specification: Specification) => TemplateError[]
 
-
-export function getResourceErrors(resource: Resource, specification: ResourceSpecification): Array<TemplateError> {
+export function getPropertiesErrors(properties: PropertiesValidator<mixed>, specification: ResourceSpecification): Array<TemplateError> {
   return resourceValidators.reduce((errors, validator) => {
     return [
       ...errors,
-      ...validator(resource, specification)
+      ...validator(properties, specification)
     ];
   }, []);
 }

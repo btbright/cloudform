@@ -21,4 +21,4 @@ export default function getUnknownPropertiesErrors(
 }
 
 const makeInvalidPropertyError = propertyName =>
-  makeResourceError(`Invalid property: ${propertyName}`, "UnknownProperty");
+  makeResourceError(`Invalid property`, "UnknownProperty", propertyName);

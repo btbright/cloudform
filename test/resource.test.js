@@ -4,9 +4,7 @@ test("it returns no errors with a simple resource", () => {
   const resource = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      },
+      DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: "database access"
     }
   };
@@ -17,9 +15,7 @@ test("it finds a missing property", () => {
   const resource = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      }
+      DBSecurityGroupIngress: [{CIDRIP: "test"}]
     }
   };
   expect(getErrors(resource).length).toBe(1);
@@ -29,9 +25,7 @@ test("it finds an unknown property", () => {
   const resource = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      },
+      DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: "database access",
       Invalid: {
         ImNotReal: 3
@@ -45,9 +39,7 @@ test("it finds an invalid property primitive: should be string", () => {
   const resource = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      },
+      DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: true //should be "database access"
     }
   };
@@ -55,18 +47,14 @@ test("it finds an invalid property primitive: should be string", () => {
   const resource2 = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      },
+      DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: [true] //should be "database access"
     }
   };
   const resource3 = {
     Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
-      DBSecurityGroupIngress: {
-        EC2SecurityGroupName: { Ref: "WebServerSecurityGroup" }
-      },
+      DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: { test: true } //should be "database access"
     }
   };
@@ -80,7 +68,7 @@ test("it finds an invalid property list of primitives", () => {
   const resource = {
     Type: "AWS::AutoScaling::AutoScalingGroup",
     Properties: {
-      AvailabilityZones: [1,2,3,4,5], //should be strings
+      AvailabilityZones: [1, 2, 3, 4, 5], //should be strings
       MinSize: "1",
       MaxSize: "5"
     }
@@ -105,8 +93,8 @@ test("it finds an invalid property map of primitives", () => {
     Properties: {
       TemplateURL: "http://test.com",
       Parameters: {
-        "test": 4,
-        "test2": 5
+        test: 4,
+        test2: 5
       }
     }
   };
@@ -145,6 +133,57 @@ test("it finds a typed property with invalid properties", () => {
       StepScalingPolicyConfiguration: {
         MetricAggregationType: true
       }
+    }
+  };
+
+  expect(getErrors(resource).length).toBe(1);
+});
+
+test("it finds an invalid typed property item in a list", () => {
+  const resource = {
+    Type: "AWS::EC2::SecurityGroup",
+    Properties: {
+      GroupDescription:
+        "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
+      SecurityGroupIngress: [
+        {
+          IpProtocol: true,
+          FromPort: "80",
+          ToPort: "80",
+          CidrIp: { Ref: "SSHLocation" }
+        },
+        {
+          IpProtocol: "tcp",
+          FromPort: "22",
+          ToPort: "22",
+          CidrIp: { Ref: "SSHLocation" }
+        }
+      ]
+    }
+  };
+
+  expect(getErrors(resource).length).toBe(1);
+});
+
+test("it finds a missing property on a typed property item in a list", () => {
+  const resource = {
+    Type: "AWS::EC2::SecurityGroup",
+    Properties: {
+      GroupDescription:
+        "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
+      SecurityGroupIngress: [
+        {
+          FromPort: "80",
+          ToPort: "80",
+          CidrIp: { Ref: "SSHLocation" }
+        },
+        {
+          IpProtocol: "tcp",
+          FromPort: "22",
+          ToPort: "22",
+          CidrIp: { Ref: "SSHLocation" }
+        }
+      ]
     }
   };
 

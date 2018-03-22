@@ -5,24 +5,33 @@ import type { PropertiesCollection, Specification } from "../specifications";
 import { makeResourceError } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
 import { getPropertyIntersectionError } from "./";
-import type { Resource } from "../resource"
+import type { Resource } from "../resource";
 
 //resources must have all required attributes defined in the specification
 export default function getMissingRequiredPropertiesErrors(
-  resource: Resource,
+  properties: PropertiesCollection<mixed>,
   specification: Specification
 ): TemplateError[] {
-  const propertyNames = Object.keys(resource.Properties);
-  return getRequiredPropertyNames(specification).reduce((errors, requiredPropertyName) => {
-    return [...errors, ...getRequiredPropertyError(propertyNames, requiredPropertyName)]
-  }, []);
+  const propertyNames = Object.keys(properties);
+  return getRequiredPropertyNames(specification).reduce(
+    (errors, requiredPropertyName) => {
+      return [
+        ...errors,
+        ...getRequiredPropertyError(propertyNames, requiredPropertyName)
+      ];
+    },
+    []
+  );
 }
 
-function getRequiredPropertyError(propertyNames: string[], requiredPropertyName: string): TemplateError[] {
-  if (propertyNames.indexOf(requiredPropertyName) === -1){
+function getRequiredPropertyError(
+  propertyNames: string[],
+  requiredPropertyName: string
+): TemplateError[] {
+  if (propertyNames.indexOf(requiredPropertyName) === -1) {
     return [makeMissingRequiredPropertyError(requiredPropertyName)];
   }
-  return []
+  return [];
 }
 
 function getRequiredPropertyNames(specification: Specification): string[] {
@@ -32,4 +41,7 @@ function getRequiredPropertyNames(specification: Specification): string[] {
 }
 
 const makeMissingRequiredPropertyError = propertyName =>
-  makeResourceError(`Missing property: ${propertyName}`, "MissingRequiredProperty");
+  makeResourceError(
+    `Missing property: ${propertyName}`,
+    "MissingRequiredProperty"
+  );

@@ -7,7 +7,8 @@ import type {
 } from "./specifications";
 import { getResourceSpecification } from "./specifications";
 import type { TemplateError } from "./errors";
-import { getPropertyErrors, getResourceErrors } from "./resourceValidators";
+import { prependPath } from "./errors";
+import { getPropertyErrors, getPropertiesErrors } from "./resourceValidators";
 
 export type Resource = {
   Type: string,
@@ -17,13 +18,27 @@ export type Resource = {
 
 export function getErrors(resource: Resource) {
   const specification = getResourceSpecification(resource.Type);
-  let errors = Object.keys(resource.Properties).reduce((newErrors, propertyKey) => {
-    const propErrors = getPropertyErrors({[propertyKey]: resource.Properties[propertyKey]}, resource.Type, specification);
-    return [...newErrors, ...propErrors]
-  }, []);
+  const errors = getPropertiesCollectionErrors(resource.Properties, specification, resource.Type);
 
-  errors = [...errors, ...getResourceErrors(resource, specification)];
+  const pathedErrors = errors.map(prependPath(resource.Type));
+  console.log(pathedErrors)
+  return pathedErrors;
+}
 
-  console.log(errors);
-  return errors;
+export function getPropertiesCollectionErrors(properties: PropertiesCollection<mixed>, specification: Specification, resourceType: string){
+  let errors = Object.keys(properties).reduce(
+    (newErrors, propertyKey) => {
+      return [
+        ...newErrors,
+        ...getPropertyErrors(
+          { [propertyKey]: properties[propertyKey] },
+          resourceType,
+          specification
+        )
+      ];
+    },
+    []
+  );
+
+  return [...errors, ...getPropertiesErrors(properties, specification)];
 }

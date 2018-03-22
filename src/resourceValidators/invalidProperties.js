@@ -6,21 +6,23 @@ import type {
   Specification,
   ResourceProperties
 } from "../specifications";
-import { makeResourceError } from "../errors";
+import { makeResourceError, prependPath } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
 import { getPropertyIntersectionError, getPropertyErrors } from "./";
-import { isArrayReturningFunction } from "../intrinsicFunctions";
+import { getPropertiesCollectionErrors } from "../resource"
+import { isArrayReturningFunction, isIntrinsicFunction } from "../intrinsicFunctions";
 
 const validators = [
   getPrimitivePropertyErrors,
   getPrimitiveListErrors,
   getPrimitiveMapErrors,
-  getTypedPropertyErrors
+  getTypedPropertyErrors,
+  getTypedListPropertyErrors
 ];
 
 //checks all properties to ensure they match the specification
 export default function getInvalidPropertiesErrors(
-  property: {[key: string]: mixed},
+  property: { [key: string]: mixed },
   resourceTypeName: string,
   specification: Specification
 ): Array<TemplateError> {
@@ -28,12 +30,18 @@ export default function getInvalidPropertiesErrors(
   if (!specification.Properties.hasOwnProperty(propertyName)) return [];
   const propertySpecification = specification.Properties[propertyName];
 
-  return validators.reduce((newErrors, validator) => {
-    return [
-      ...newErrors,
-      ...validator(propertySpecification, property[propertyName], resourceTypeName)
-    ];
-  }, []);
+  return validators
+    .reduce((newErrors, validator) => {
+      return [
+        ...newErrors,
+        ...validator(
+          propertySpecification,
+          property[propertyName],
+          resourceTypeName
+        )
+      ];
+    }, [])
+    .map(prependPath(propertyName));
 }
 
 /*
@@ -165,9 +173,7 @@ function getTypedPropertyErrors(
       `${resourceTypeName}.${propertySpecification.Type}`
     );
     if (typeof property !== "object" || property === null)
-      return [
-        makeInvalidTypedPropertyError(typeof property)
-      ];
+      return [makeInvalidTypedPropertyError(typeof property)];
     return getPropertyErrors(
       property,
       resourceTypeName,
@@ -177,10 +183,45 @@ function getTypedPropertyErrors(
   return [];
 }
 
-const makeInvalidTypedPropertyError = (instanceType) =>
+const makeInvalidTypedPropertyError = instanceType =>
   makeResourceError(
     `Should be an object but got a '${instanceType}'`,
     "InvalidTypedProperty"
+  );
+
+
+//note - this recursively calls getPropertiesErrors
+//to check nested type meets all properties requirements
+function getTypedListPropertyErrors(
+  propertySpecification: ResourceProperties,
+  property: mixed,
+  resourceTypeName: string
+): Array<TemplateError> {
+  if (
+    !!propertySpecification.ItemType &&
+    propertySpecification.Type === "List"
+  ) {
+    const propertyTypeSpecification = getPropertySpecification(
+      `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
+    );
+    if (!isArrayReturningFunction(property) && !Array.isArray(property))
+      return [makeInvalidTypedListPropertyError(unwrap(propertySpecification.ItemType), typeof property)];
+    if (isArrayReturningFunction(property)) return []; // not handling this right now
+    return property.reduce((errors, item) => {
+      return [...errors, ...getPropertiesCollectionErrors(
+        item,
+        propertyTypeSpecification,
+        resourceTypeName
+      )]
+    }, []);
+  }
+  return [];
+}
+
+const makeInvalidTypedListPropertyError = (itemType, instanceType) =>
+  makeResourceError(
+    `Should be a list of '${itemType}' but found a '${instanceType}'`,
+    "InvalidTypedListProperty"
   );
 
 /*
@@ -206,20 +247,27 @@ function arePrimitiveListValuesValid(
   return property.every(val => isPrimitiveTypeValueValid(val, itemTypeName));
 }
 
-function isPrimitiveTypeValueValid(property: mixed, typeName: ?string): boolean {
+const integerStringRegex = /^[0-9]+$/;
+
+function isPrimitiveTypeValueValid(
+  property: mixed,
+  typeName: ?string
+): boolean {
+  if (isIntrinsicFunction(property)) return true;
   const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
   if (normalizedTypeName === "integer") {
-    return Number.isInteger(property);
+    return Number.isInteger(property) || integerStringRegex.test(property);
   }
   if (normalizedTypeName === "boolean") {
-    return typeof property === "boolean" || property === "true" || property === "false";
+    return (
+      typeof property === "boolean" ||
+      property === "true" ||
+      property === "false"
+    );
   }
   return typeof property === normalizedTypeName;
 }
 
-function isInteger(property: mixed): boolean {
-  return typeof property === "number" && property % 1 === 0;
-}
 
 function makeNormalizedPrimitiveTypeName(typeName: ?string): string {
   if (typeof typeName !== "string") {
