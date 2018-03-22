@@ -4,11 +4,13 @@ import specData from "../data/spec.json";
 export type Specification = ResourceSpecification | PropertySpecification;
 
 type ResourceSpecification = {
+  SpecificationType: string,
   Properties: PropertiesCollection<ResourceProperties>,
-  Attributes: PropertiesCollection<AttributeProperties>
+  Attributes: ?PropertiesCollection<AttributeProperties>
 };
 
 type PropertySpecification = {
+  SpecificationType: string,
   Properties: PropertiesCollection<ResourceProperties>
 };
 
@@ -34,14 +36,14 @@ export function getResourceSpecification(
   resourceSpecificationKey: string
 ): ResourceSpecification {
   const compactType = specData.r[resourceSpecificationKey];
-  return parseCompactResourceSpecification(compactType);
+  return parseCompactResourceSpecification(compactType, "Resource");
 }
 
 export function getPropertySpecification(
   propertySpecificationKey: string
 ): PropertySpecification {
   const compactType = specData.p[propertySpecificationKey];
-  return parseCompactResourceSpecification(compactType);
+  return parseCompactResourceSpecification(compactType, "Property");
 }
 
 const finalPropertyKeys = {
@@ -54,14 +56,16 @@ const finalPropertyKeys = {
 };
 
 function parseCompactResourceSpecification(
-  compactType: any
+  compactType: any,
+  typeName: string
 ): ResourceSpecification {
-  const ret = {};
+  const ret = {
+    SpecificationType: typeName,
+    Properties: parseCompactResourceSection(compactType.p),
+    Attributes: undefined
+  };
   if (compactType.a) {
     ret.Attributes = parseCompactResourceSection(compactType.a);
-  }
-  if (compactType.p) {
-    ret.Properties = parseCompactResourceSection(compactType.p);
   }
   return ret;
 }

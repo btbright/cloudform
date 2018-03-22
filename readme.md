@@ -1,6 +1,4 @@
 # todo
-- refactor for maintainability
-- comments
 - better errors
 - validations:
 -- getatt
