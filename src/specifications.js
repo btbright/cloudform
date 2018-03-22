@@ -3,7 +3,7 @@ import specData from "../data/spec.json";
 
 export type Specification = ResourceSpecification | PropertySpecification;
 
-type ResourceSpecification = {
+export type ResourceSpecification = {
   SpecificationType: string,
   Properties: PropertiesCollection<ResourceProperties>,
   Attributes: ?PropertiesCollection<AttributeProperties>

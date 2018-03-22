@@ -4,22 +4,25 @@ import { curry } from "lodash/fp";
 import type { PropertiesCollection, Specification } from "../specifications";
 import { makeResourceError } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
-import { getPropertyIntersectionErrors } from "./";
+import { getPropertyIntersectionError } from "./";
+import type { Resource } from "../resource"
 
 //resources must have all required attributes defined in the specification
 export default function getMissingRequiredPropertiesErrors(
-  properties: PropertiesCollection<mixed>,
-  resourceTypeName: string,
+  resource: Resource,
   specification: Specification
-): Array<TemplateError> {
-  if (typeof properties !== "object" || properties === null)
-    return [{ errorString: "invalid" }];
+): TemplateError[] {
+  const propertyNames = Object.keys(resource.Properties);
+  return getRequiredPropertyNames(specification).reduce((errors, requiredPropertyName) => {
+    return [...errors, ...getRequiredPropertyError(propertyNames, requiredPropertyName)]
+  }, []);
+}
 
-  return getPropertyIntersectionErrors(
-    getRequiredPropertyNames(specification),
-    properties,
-    makeMissingRequiredPropertyError
-  );
+function getRequiredPropertyError(propertyNames: string[], requiredPropertyName: string): TemplateError[] {
+  if (propertyNames.indexOf(requiredPropertyName) === -1){
+    return [makeMissingRequiredPropertyError(requiredPropertyName)];
+  }
+  return []
 }
 
 function getRequiredPropertyNames(specification: Specification): string[] {

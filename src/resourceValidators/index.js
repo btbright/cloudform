@@ -2,58 +2,62 @@
 import type {
   PropertiesCollection,
   ResourceProperties,
-  Specification
+  Specification,
+  ResourceSpecification
 } from "../specifications";
 import type { TemplateError, ErrorGenerator } from "../errors";
+import type { Resource } from "../resource";
 import getInvalidPropertiesErrors from "./invalidProperties";
 import getUnknownPropertiesErrors from "./unknownProperties";
 import getRequiredPropertiesErrors from "./requiredProperties";
 
-const propertyValidators = [
-  getInvalidPropertiesErrors,
-  getUnknownPropertiesErrors,
+const resourceValidators: ResourceValidator[] = [
   getRequiredPropertiesErrors
+]
+
+const propertyValidators: PropertyValidator[] = [
+  getInvalidPropertiesErrors,
+  getUnknownPropertiesErrors
 ];
 
+type PropertyValidator = (property: {[key: string]: mixed},
+  resourceTypeName: string,
+  specification: Specification) => TemplateError[]
+
+type ResourceValidator = (resource: Resource, specification: Specification) => TemplateError[]
+
+
+export function getResourceErrors(resource: Resource, specification: ResourceSpecification): Array<TemplateError> {
+  return resourceValidators.reduce((errors, validator) => {
+    return [
+      ...errors,
+      ...validator(resource, specification)
+    ];
+  }, []);
+}
+
 // Collects and returns all the property errors for the resource
-export function getPropertiesErrors(
-  properties: PropertiesCollection<mixed>,
+export function getPropertyErrors(
+  property: {[key: string]: mixed},
   resourceTypeName: string,
   specification: Specification
 ): Array<TemplateError> {
   return propertyValidators.reduce((errors, validator) => {
     return [
       ...errors,
-      ...validator(properties, resourceTypeName, specification)
+      ...validator(property, resourceTypeName, specification)
     ];
   }, []);
 }
 
-//utility function that verifies one set of properties
-//is a subset of a second. useful in multiple scenarios
-export function getPropertyIntersectionErrors<T>(
-  requiredProperties: string[],
-  properties: PropertiesCollection<T>,
+export function getPropertyIntersectionError<T>(
+  propertyName: string,
+  allowableProperties: string[],
   errorGenerator: ErrorGenerator
 ) {
-  if (typeof properties !== "object" || properties === null)
-    return [{ errorString: "invalid" }];
-  return requiredProperties.reduce(
-    getPropertyIntersectionError(properties, errorGenerator),
-    []
-  );
-}
-
-function getPropertyIntersectionError<T>(
-  propertiesToValidate: PropertiesCollection<T>,
-  errorGenerator: ErrorGenerator
-) {
-  return (errors: Array<TemplateError>, requiredPropertyName: string) => {
-    if (!propertiesToValidate.hasOwnProperty(requiredPropertyName)) {
-      errors.push(errorGenerator(requiredPropertyName));
-    }
-    return errors;
-  };
+  if (allowableProperties.indexOf(propertyName) === -1){
+    return errorGenerator(propertyName);
+  }
 }
 
 //for flow reasons

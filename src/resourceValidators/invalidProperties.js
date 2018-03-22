@@ -8,7 +8,7 @@ import type {
 } from "../specifications";
 import { makeResourceError } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
-import { getPropertyIntersectionErrors, getPropertiesErrors } from "./";
+import { getPropertyIntersectionError, getPropertyErrors } from "./";
 import { isArrayReturningFunction } from "../intrinsicFunctions";
 
 const validators = [
@@ -20,24 +20,19 @@ const validators = [
 
 //checks all properties to ensure they match the specification
 export default function getInvalidPropertiesErrors(
-  properties: PropertiesCollection<mixed>,
+  property: {[key: string]: mixed},
   resourceTypeName: string,
   specification: Specification
 ): Array<TemplateError> {
-  if (typeof properties !== "object" || properties === null)
-    return [{ errorString: "invalid" }];
-  return Object.keys(properties).reduce((errors, propertyName: string) => {
-    //ignore missing properties
-    if (!specification.Properties.hasOwnProperty(propertyName)) return errors;
-    const property = properties[propertyName];
-    const propertySpecification = specification.Properties[propertyName];
+  const propertyName = Object.keys(property)[0];
+  if (!specification.Properties.hasOwnProperty(propertyName)) return [];
+  const propertySpecification = specification.Properties[propertyName];
 
-    return validators.reduce((newErrors, validator) => {
-      return [
-        ...newErrors,
-        ...validator(propertySpecification, property, resourceTypeName)
-      ];
-    }, errors);
+  return validators.reduce((newErrors, validator) => {
+    return [
+      ...newErrors,
+      ...validator(propertySpecification, property[propertyName], resourceTypeName)
+    ];
   }, []);
 }
 
@@ -173,7 +168,7 @@ function getTypedPropertyErrors(
       return [
         makeInvalidTypedPropertyError(typeof property)
       ];
-    return getPropertiesErrors(
+    return getPropertyErrors(
       property,
       resourceTypeName,
       propertyTypeSpecification

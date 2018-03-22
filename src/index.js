@@ -1,6 +1,6 @@
 // @flow
 
-import { getResourceErrors } from "./resource";
+import { getErrors } from "./resource";
 import type { Resource } from "./resource";
 import type { TemplateError } from "./errors";
 
@@ -18,6 +18,6 @@ export function getTemplateErrors(template: Template): Array<TemplateError> {
 
 function getResourcesErrors(resources: {[key: string]: Resource}): Array<TemplateError>{
   return Object.keys(resources).reduce((errors, resourceKey)=> {
-    return [...errors, ...getResourceErrors(resources[resourceKey])]
+    return [...errors, ...getErrors(resources[resourceKey])]
   }, []);
 }

@@ -1,4 +1,4 @@
-import { getResourceErrors } from "../src/resource";
+import { getErrors } from "../src/resource";
 
 test("it returns no errors with a simple resource", () => {
   const resource = {
@@ -10,7 +10,7 @@ test("it returns no errors with a simple resource", () => {
       GroupDescription: "database access"
     }
   };
-  expect(getResourceErrors(resource).length).toBe(0);
+  expect(getErrors(resource).length).toBe(0);
 });
 
 test("it finds a missing property", () => {
@@ -22,7 +22,7 @@ test("it finds a missing property", () => {
       }
     }
   };
-  expect(getResourceErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds an unknown property", () => {
@@ -38,7 +38,7 @@ test("it finds an unknown property", () => {
       }
     }
   };
-  expect(getResourceErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds an invalid property primitive: should be string", () => {
@@ -71,9 +71,9 @@ test("it finds an invalid property primitive: should be string", () => {
     }
   };
 
-  expect(getResourceErrors(resource).length).toBe(1);
-  expect(getResourceErrors(resource2).length).toBe(1);
-  expect(getResourceErrors(resource3).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
+  expect(getErrors(resource2).length).toBe(1);
+  expect(getErrors(resource3).length).toBe(1);
 });
 
 test("it finds an invalid property list of primitives", () => {
@@ -95,8 +95,8 @@ test("it finds an invalid property list of primitives", () => {
     }
   };
 
-  expect(getResourceErrors(resource).length).toBe(1);
-  expect(getResourceErrors(resource2).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
+  expect(getErrors(resource2).length).toBe(1);
 });
 
 test("it finds an invalid property map of primitives", () => {
@@ -119,8 +119,8 @@ test("it finds an invalid property map of primitives", () => {
     }
   };
 
-  expect(getResourceErrors(resource).length).toBe(1);
-  expect(getResourceErrors(resource2).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
+  expect(getErrors(resource2).length).toBe(1);
 });
 
 test("it finds an invalid typed property", () => {
@@ -133,7 +133,7 @@ test("it finds an invalid typed property", () => {
     }
   };
 
-  expect(getResourceErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds a typed property with invalid properties", () => {
@@ -148,5 +148,5 @@ test("it finds a typed property with invalid properties", () => {
     }
   };
 
-  expect(getResourceErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(1);
 });

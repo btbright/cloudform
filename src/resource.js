@@ -7,7 +7,7 @@ import type {
 } from "./specifications";
 import { getResourceSpecification } from "./specifications";
 import type { TemplateError } from "./errors";
-import { getPropertiesErrors } from "./resourceValidators";
+import { getPropertyErrors, getResourceErrors } from "./resourceValidators";
 
 export type Resource = {
   Type: string,
@@ -15,9 +15,15 @@ export type Resource = {
   Attributes: ?PropertiesCollection<mixed>
 };
 
-export function getResourceErrors(resource: Resource) {
+export function getErrors(resource: Resource) {
   const specification = getResourceSpecification(resource.Type);
-  const errors = getPropertiesErrors(resource.Properties, resource.Type, specification);
+  let errors = Object.keys(resource.Properties).reduce((newErrors, propertyKey) => {
+    const propErrors = getPropertyErrors({[propertyKey]: resource.Properties[propertyKey]}, resource.Type, specification);
+    return [...newErrors, ...propErrors]
+  }, []);
+
+  errors = [...errors, ...getResourceErrors(resource, specification)];
+
   console.log(errors);
   return errors;
 }
