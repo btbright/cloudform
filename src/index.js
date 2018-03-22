@@ -1,23 +1,23 @@
 // @flow
-import { isArray, curry } from "lodash";
-import type {
-  PropertiesCollection,
-  Specification,
-  ResourceProperties
-} from "./specifications";
-import { getResourceSpecification } from "./specifications";
-import type { TemplateError } from "./errors";
-import { getPropertiesErrors } from "./resourceValidators";
 
-type Resource = {
-  Type: string,
-  Properties: PropertiesCollection<mixed>,
-  Attributes: ?PropertiesCollection<mixed>
+import { getResourceErrors } from "./resource";
+import type { Resource } from "./resource";
+import type { TemplateError } from "./errors";
+
+type Template = {
+  Resources: ?{[key: string]: Resource}
 };
 
-export function getResourceErrors(resource: Resource) {
-  const specification = getResourceSpecification(resource.Type);
-  const errors = getPropertiesErrors(resource.Properties, resource.Type, specification);
-  console.log(errors);
+export function getTemplateErrors(template: Template): Array<TemplateError> {
+  let errors = [];
+  if (template.Resources){
+    errors = [...errors, ...getResourcesErrors(template.Resources)]
+  }
   return errors;
+}
+
+function getResourcesErrors(resources: {[key: string]: Resource}): Array<TemplateError>{
+  return Object.keys(resources).reduce((errors, resourceKey)=> {
+    return [...errors, ...getResourceErrors(resources[resourceKey])]
+  }, []);
 }

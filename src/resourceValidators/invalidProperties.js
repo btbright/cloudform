@@ -1,5 +1,5 @@
 //@flow
-import { curry } from "lodash";
+import { curry } from "lodash/fp";
 import { getPropertySpecification } from "../specifications";
 import type {
   PropertiesCollection,
@@ -12,7 +12,10 @@ import { getPropertyIntersectionErrors, getPropertiesErrors } from "./";
 import { isArrayReturningFunction } from "../intrinsicFunctions";
 
 const validators = [
-  getPrimitivePropertyErrors, getPrimitiveListErrors, getPrimitiveMapErrors, getTypedPropertyErrors
+  getPrimitivePropertyErrors,
+  getPrimitiveListErrors,
+  getPrimitiveMapErrors,
+  getTypedPropertyErrors
 ];
 
 //checks all properties to ensure they match the specification
@@ -30,7 +33,10 @@ export default function getInvalidPropertiesErrors(
     const propertySpecification = specification.Properties[propertyName];
 
     return validators.reduce((newErrors, validator) => {
-      return [...newErrors, ...validator(propertySpecification, property, resourceTypeName)]
+      return [
+        ...newErrors,
+        ...validator(propertySpecification, property, resourceTypeName)
+      ];
     }, errors);
   }, []);
 }
@@ -40,7 +46,7 @@ export default function getInvalidPropertiesErrors(
   -- longs, decimals and timestamp are checked that typeof === "number"
   -- json is checked that typeof === "string"
   -- the rest are checked that typeof === lowered(typename from specification) and they
-     contain a proper value
+     contain a proper property
 */
 function getPrimitivePropertyErrors(
   propertySpecification: ResourceProperties,
@@ -52,15 +58,20 @@ function getPrimitivePropertyErrors(
     !isPrimitiveTypeValueValid(property, propertySpecification.PrimitiveType)
   ) {
     return [
-      {
-        errorString: `${typeof property} found instead of ${
-          propertySpecification.PrimitiveType
-        }`
-      }
+      makeInvalidPrimitivePropertyError(
+        propertySpecification.PrimitiveType,
+        typeof property
+      )
     ];
   }
   return [];
 }
+
+const makeInvalidPrimitivePropertyError = (correctType, instanceType) =>
+  makeResourceError(
+    `Should be of type '${correctType} but got '${instanceType}'`,
+    "InvalidPrimitveProperty"
+  );
 
 function getPrimitiveMapErrors(
   propertySpecification: ResourceProperties,
@@ -69,14 +80,24 @@ function getPrimitiveMapErrors(
 ): Array<TemplateError> {
   return hasPrimitiveMapError(propertySpecification, property)
     ? [
-        {
-          errorString: `should be a map that contains ${unwrap(
-            propertySpecification.PrimitiveItemType
-          )}`
-        }
+        makeInvalidMapPropertyError(
+          propertySpecification.PrimitiveItemType,
+          typeof property
+        )
       ]
     : [];
 }
+
+const makeInvalidMapPropertyError = (
+  correctType: ?string,
+  instanceType: string
+) =>
+  makeResourceError(
+    `Should be a map with values of type '${unwrap(
+      correctType
+    )} but got property of type '${instanceType}'`,
+    "InvalidMapPropertyproperty"
+  );
 
 function hasPrimitiveMapError(
   propertySpecification: ResourceProperties,
@@ -99,15 +120,25 @@ function getPrimitiveListErrors(
 ): Array<TemplateError> {
   if (hasPrimitiveListError(propertySpecification, property)) {
     return [
-      {
-        errorString: `should be a list that contains ${unwrap(
-          propertySpecification.PrimitiveItemType
-        )}`
-      }
+      makeInvalidListPropertyError(
+        propertySpecification.PrimitiveItemType,
+        typeof property
+      )
     ];
   }
   return [];
 }
+
+const makeInvalidListPropertyError = (
+  correctType: ?string,
+  instanceType: string
+) =>
+  makeResourceError(
+    `Should be a list with values of type '${unwrap(
+      correctType
+    )} but got property of type '${instanceType}'`,
+    "InvalidListPropertyproperty"
+  );
 
 function hasPrimitiveListError(
   propertySpecification: ResourceProperties,
@@ -127,7 +158,7 @@ function hasPrimitiveListError(
 //to check nested type meets all properties requirements
 function getTypedPropertyErrors(
   propertySpecification: ResourceProperties,
-  value: mixed,
+  property: mixed,
   resourceTypeName: string
 ): Array<TemplateError> {
   if (
@@ -138,10 +169,12 @@ function getTypedPropertyErrors(
     const propertyTypeSpecification = getPropertySpecification(
       `${resourceTypeName}.${propertySpecification.Type}`
     );
-    if (typeof value !== "object" || value === null)
-      return [{ errorString: `Type ${resourceTypeName} contains invalid property: ${unwrap(propertySpecification.Type)} - found ${typeof value} instead of object` }];
+    if (typeof property !== "object" || property === null)
+      return [
+        makeInvalidTypedPropertyError(typeof property)
+      ];
     return getPropertiesErrors(
-      value,
+      property,
       resourceTypeName,
       propertyTypeSpecification
     );
@@ -149,42 +182,48 @@ function getTypedPropertyErrors(
   return [];
 }
 
+const makeInvalidTypedPropertyError = (instanceType) =>
+  makeResourceError(
+    `Should be an object but got a '${instanceType}'`,
+    "InvalidTypedProperty"
+  );
+
 /*
   Primitive utilities
 */
 
 function arePrimitiveMapValuesValid(
-  value: mixed,
+  property: mixed,
   itemTypeName: ?string
 ): boolean {
-  if (typeof value !== "object") return false;
-  return Object.values(value).every(val =>
+  if (typeof property !== "object") return false;
+  return Object.values(property).every(val =>
     isPrimitiveTypeValueValid(val, itemTypeName)
   );
 }
 
 function arePrimitiveListValuesValid(
-  value: mixed,
+  property: mixed,
   itemTypeName: ?string
 ): boolean {
-  if (isArrayReturningFunction(value)) return true;
-  if (!Array.isArray(value)) return false;
-  return value.every(val => isPrimitiveTypeValueValid(val, itemTypeName));
+  if (isArrayReturningFunction(property)) return true;
+  if (!Array.isArray(property)) return false;
+  return property.every(val => isPrimitiveTypeValueValid(val, itemTypeName));
 }
 
-function isPrimitiveTypeValueValid(value: mixed, typeName: ?string): boolean {
+function isPrimitiveTypeValueValid(property: mixed, typeName: ?string): boolean {
   const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
   if (normalizedTypeName === "integer") {
-    return Number.isInteger(value);
+    return Number.isInteger(property);
   }
   if (normalizedTypeName === "boolean") {
-    return typeof value === "boolean" || value === "true" || value === "false";
+    return typeof property === "boolean" || property === "true" || property === "false";
   }
-  return typeof value === normalizedTypeName;
+  return typeof property === normalizedTypeName;
 }
 
-function isInteger(value: mixed): boolean {
-  return typeof value === "number" && value % 1 === 0;
+function isInteger(property: mixed): boolean {
+  return typeof property === "number" && property % 1 === 0;
 }
 
 function makeNormalizedPrimitiveTypeName(typeName: ?string): string {

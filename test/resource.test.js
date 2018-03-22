@@ -1,4 +1,4 @@
-import { getResourceErrors } from "../src/";
+import { getResourceErrors } from "../src/resource";
 
 test("it returns no errors with a simple resource", () => {
   const resource = {

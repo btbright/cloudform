@@ -1,8 +1,8 @@
 //@flow
-import { curry } from "lodash";
+import { curry } from "lodash/fp";
 import type { PropertiesCollection, Specification } from "../specifications";
 import { makeResourceError } from "../errors";
-import type { TemplateError, ErrorGenerator } from "../errors";
+import type { TemplateError } from "../errors";
 import { getPropertyIntersectionErrors, getKeys } from "./";
 
 //checks that there no unknown properties on the resource
@@ -14,17 +14,12 @@ export default function getUnknownPropertiesErrors(
 ): Array<TemplateError> {
   if (typeof properties !== "object" || properties === null)
     return [{ errorString: "invalid" }];
-  const errorGenerator = makeUnknownPropertyErrorGenerator(resourceTypeName);
   return getPropertyIntersectionErrors(
     getKeys(properties),
     specification.Properties,
-    errorGenerator
+    makeInvalidPropertyError
   );
 }
 
-const makeUnknownPropertyErrorGenerator = curry(
-  (resourceTypeName: string, propertyName: string) =>
-    makeResourceError(
-      `Type ${resourceTypeName} contains invalid property: ${propertyName}`
-    )
-);
+const makeInvalidPropertyError = propertyName =>
+  makeResourceError(`Invalid property: ${propertyName}`, "UnknownProperty");

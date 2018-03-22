@@ -1,10 +1,11 @@
 export type TemplateError = {
-  errorString: string
+  errorString: string,
+  type: string,
+  path: string
 };
 
-export type ErrorGenerator = (propertyName: string) => TemplateError;
-export type ErrorGeneratorGenerator = (
-  resourceTypeName: string
-) => ErrorGenerator;
-
-export const makeResourceError = (errorString: string) => ({ errorString });
+export const makeResourceError = (
+  errorString: string,
+  type: string,
+  path: string
+) => ({ errorString, type, path });
