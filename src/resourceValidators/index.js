@@ -10,8 +10,17 @@ import type { Resource } from "../resource";
 import getInvalidPropertiesErrors from "./invalidProperties";
 import getUnknownPropertiesErrors from "./unknownProperties";
 import getRequiredPropertiesErrors from "./requiredProperties";
+import getInvalidStructureErrors from "./invalidResourceStructure";
 
-const resourceValidators: ResourceValidator[] = [
+
+type PropertyValidator = (property: {[key: string]: mixed},
+  resourceTypeName: string,
+  specification: Specification) => TemplateError[]
+
+type PropertiesValidator = (properties: PropertiesValidator<mixed>, specification: Specification) => TemplateError[]
+type ResourceValidator = (resource: Resource, specification: Specification) => TemplateError[]
+
+const propertiesValidators: PropertiesValidator[] = [
   getRequiredPropertiesErrors
 ]
 
@@ -20,14 +29,9 @@ const propertyValidators: PropertyValidator[] = [
   getUnknownPropertiesErrors
 ];
 
-type PropertyValidator = (property: {[key: string]: mixed},
-  resourceTypeName: string,
-  specification: Specification) => TemplateError[]
-
-type PropertiesValidator = (properties: PropertiesValidator<mixed>, specification: Specification) => TemplateError[]
-
+//resource errors that involve multiple properties at once
 export function getPropertiesErrors(properties: PropertiesValidator<mixed>, specification: ResourceSpecification): Array<TemplateError> {
-  return resourceValidators.reduce((errors, validator) => {
+  return propertiesValidators.reduce((errors, validator) => {
     return [
       ...errors,
       ...validator(properties, specification)
@@ -35,7 +39,7 @@ export function getPropertiesErrors(properties: PropertiesValidator<mixed>, spec
   }, []);
 }
 
-// Collects and returns all the property errors for the resource
+//resource errors for a single property of a resource
 export function getPropertyErrors(
   property: {[key: string]: mixed},
   resourceTypeName: string,
@@ -45,6 +49,22 @@ export function getPropertyErrors(
     return [
       ...errors,
       ...validator(property, resourceTypeName, specification)
+    ];
+  }, []);
+}
+
+const resourceValidators: ResourceValidator[] = [
+  getInvalidStructureErrors
+]
+
+//resource errors concerned with the structure of the resource
+//definition, top level attributes or cross-cutting, intra-resource
+//concerns
+export function getResourceErrors(resource: Resource, specification: Specification): Array<TemplateError>{
+  return resourceValidators.reduce((errors, validator) => {
+    return [
+      ...errors,
+      ...validator(resource, specification)
     ];
   }, []);
 }

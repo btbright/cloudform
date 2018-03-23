@@ -11,6 +11,21 @@ test("it returns no errors with a simple resource", () => {
   expect(getErrors(resource).length).toBe(0);
 });
 
+
+test("it finds an invalid resource type", () => {
+  const resource = {
+    Type: "AWS::SSM::NotAType"
+  };
+  expect(getErrors(resource).length).toBe(1);
+});
+
+test("it finds missing properties", () => {
+  const resource = {
+    Type: "AWS::SSM::Association"
+  };
+  expect(getErrors(resource).length).toBe(1);
+});
+
 test("it finds a missing property", () => {
   const resource = {
     Type: "AWS::RDS::DBSecurityGroup",

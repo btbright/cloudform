@@ -7,22 +7,29 @@ import type {
 } from "./specifications";
 import { getResourceSpecification } from "./specifications";
 import type { TemplateError } from "./errors";
-import { prependPath } from "./errors";
-import { getPropertyErrors, getPropertiesErrors } from "./resourceValidators";
+import { makeResourceError, prependPath } from "./errors";
+import { getPropertyErrors, getPropertiesErrors, getResourceErrors } from "./resourceValidators";
 
 export type Resource = {
   Type: string,
-  Properties: PropertiesCollection<mixed>,
-  Attributes: ?PropertiesCollection<mixed>
+  Properties: PropertiesCollection<mixed>
 };
 
 export function getErrors(resource: Resource) {
   const specification = getResourceSpecification(resource.Type);
-  const errors = getPropertiesCollectionErrors(resource.Properties, specification, resource.Type);
+  if (!specification) {
+    return [makeUnknownTypeError(resource.Type)]
+  }
+  let errors = getResourceErrors(resource, specification);
+  if (resource.Properties){
+    errors = errors.concat(getPropertiesCollectionErrors(resource.Properties, specification, resource.Type))
+  }
 
-  const pathedErrors = errors.map(prependPath(resource.Type));
-  console.log(pathedErrors)
-  return pathedErrors;
+  return errors;
+}
+
+function makeUnknownTypeError(typeName: string){
+  return makeResourceError(`Unknown resource type: ${typeName}`, "UnknownResourceType")
 }
 
 export function getPropertiesCollectionErrors(properties: PropertiesCollection<mixed>, specification: Specification, resourceType: string){

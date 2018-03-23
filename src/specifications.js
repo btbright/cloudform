@@ -36,6 +36,7 @@ export function getResourceSpecification(
   resourceSpecificationKey: string
 ): ResourceSpecification {
   const compactType = specData.r[resourceSpecificationKey];
+  if (!compactType) return
   return parseCompactResourceSpecification(compactType, "Resource");
 }
 

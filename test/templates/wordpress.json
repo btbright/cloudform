@@ -504,9 +504,7 @@
         "Type": "AWS::RDS::DBSecurityGroup",
         "Condition" : "Is-EC2-Classic",
         "Properties": {
-          "DBSecurityGroupIngress": {
-            "EC2SecurityGroupName": { "Ref": "WebServerSecurityGroup" }
-          },
+          "DBSecurityGroupIngress": [{"CIDRIP": "test"}],
           "GroupDescription": "database access"
         }
       },
@@ -521,8 +519,8 @@
           "DBInstanceClass"   : { "Ref" : "DBClass" },
           "AllocatedStorage"  : { "Ref" : "DBAllocatedStorage" },
           "MasterUserPassword": { "Ref" : "DBPassword" },
-          "VPCSecurityGroups": { "Fn::If" : [ "Is-EC2-VPC", [ { "Fn::GetAtt": [ "DBEC2SecurityGroup", "GroupId" ] } ], { "Ref" : "AWS::NoValue"}]},
-          "DBSecurityGroups": { "Fn::If" : [ "Is-EC2-Classic", [ { "Ref": "DBSecurityGroup" } ], { "Ref" : "AWS::NoValue"}]}
+          "VPCSecurityGroups": ["test"],
+          "DBSecurityGroups": ["asdf"]
         }
       },
   
