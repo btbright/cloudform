@@ -2,14 +2,14 @@
 
 import { getErrors } from "./resource";
 import type { Resource } from "./resource";
-import type { TemplateError } from "./errors";
-import { prependPath } from "./errors";
+import type { TemplateIssue } from "./errors";
+import { prependPath, resolveIssues } from "./errors";
 
-type Template = {
+export type Template = {
   Resources: ?{ [key: string]: Resource }
 };
 
-export function getTemplateErrors(template: Template): Array<TemplateError> {
+export function getTemplateIssues(template: Template): Array<TemplateIssue> {
   let errors = [];
   if (template.Resources) {
     errors = [
@@ -17,12 +17,12 @@ export function getTemplateErrors(template: Template): Array<TemplateError> {
       ...getResourcesErrors(template.Resources).map(prependPath("Resources"))
     ];
   }
-  return errors;
+  return errors.reduce(resolveIssues(template), []);
 }
 
 function getResourcesErrors(resources: {
   [key: string]: Resource
-}): Array<TemplateError> {
+}): Array<TemplateIssue> {
   return Object.keys(resources).reduce((errors, resourceKey) => {
     return [
       ...errors,

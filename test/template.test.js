@@ -1,9 +1,9 @@
 // @flow
 
-import { getTemplateErrors } from "../src/";
+import { getTemplateIssues } from "../src/";
 import wordpressTemplate from "./templates/wordpress.json"
 
 test("validates a valid template without errors", () => {
-    console.log(getTemplateErrors(wordpressTemplate))
-    expect(getTemplateErrors(wordpressTemplate).length).toBe(0);
+    console.log(getTemplateIssues(wordpressTemplate))
+    expect(getTemplateIssues(wordpressTemplate).length).toBe(0);
 });

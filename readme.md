@@ -1,6 +1,9 @@
 # todo
-- validations:
+- implement issue resolvers for validations:
+-- intrinsic function evaluations
 -- getatt
 -- ref
--- resource limits
 -- depends on
+
+- implement validations:
+-- resource limits

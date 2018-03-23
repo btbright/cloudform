@@ -1,4 +1,5 @@
 //@flow
+import type { Template } from "../index";
 
 export function isIntrinsicFunction(valueToTest: mixed): boolean {
   return getIntrinsicFunctionKey(valueToTest) !== undefined;
@@ -19,4 +20,8 @@ function getIntrinsicFunctionKey(valueToTest: mixed): ?string {
   if (objectKeys.length === 0) return;
   if (objectKeys[0].indexOf("Fn::") !== -1) return objectKeys[0];
   return objectKeys[0] === "Ref" ? objectKeys[0] : undefined;
+}
+
+export function isTemplateStructureError(template: Template): boolean {
+  return false;
 }

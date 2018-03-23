@@ -6,7 +6,7 @@ import type {
   ResourceProperties
 } from "./specifications";
 import { getResourceSpecification } from "./specifications";
-import type { TemplateError } from "./errors";
+import type { TemplateIssue } from "./errors";
 import { makeResourceError, prependPath } from "./errors";
 import {
   getPropertyErrors,
@@ -34,7 +34,7 @@ export function getErrors(resource: Resource) {
       )
     );
   }
-
+  
   return errors;
 }
 
@@ -61,6 +61,7 @@ export function getPropertiesCollectionErrors(
       )
     ];
   }, []);
+
 
   return [...errors, ...getPropertiesErrors(properties, specification)];
 }

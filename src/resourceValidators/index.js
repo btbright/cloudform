@@ -1,7 +1,8 @@
 //@flow
 import type { Specification } from "../specifications";
-import type { TemplateError } from "../errors";
+import type { TemplateIssue } from "../errors";
 import type { Resource } from "../resource";
+import { prependPath } from "../errors";
 
 //resource errors concerned with the structure of the resource
 //definition, top level attributes or cross-cutting, intra-resource
@@ -10,7 +11,7 @@ import type { Resource } from "../resource";
 type ResourceValidator = (
   resource: Resource,
   specification: Specification
-) => TemplateError[];
+) => TemplateIssue[];
 
 import getInvalidStructureErrors from "./invalidResourceStructure";
 const resourceValidators: ResourceValidator[] = [getInvalidStructureErrors];
@@ -18,7 +19,7 @@ const resourceValidators: ResourceValidator[] = [getInvalidStructureErrors];
 export function getResourceErrors(
   resource: Resource,
   specification: Specification
-): Array<TemplateError> {
+): Array<TemplateIssue> {
   return resourceValidators.reduce((errors, validator) => {
     return [...errors, ...validator(resource, specification)];
   }, []);
@@ -28,7 +29,7 @@ export function getResourceErrors(
 type PropertiesValidator = (
   properties: PropertiesValidator<mixed>,
   specification: Specification
-) => TemplateError[];
+) => TemplateIssue[];
 
 import getRequiredPropertiesErrors from "./requiredProperties";
 const propertiesValidators: PropertiesValidator[] = [
@@ -38,10 +39,10 @@ const propertiesValidators: PropertiesValidator[] = [
 export function getPropertiesErrors(
   properties: PropertiesValidator<mixed>,
   specification: ResourceSpecification
-): Array<TemplateError> {
+): Array<TemplateIssue> {
   return propertiesValidators.reduce((errors, validator) => {
     return [...errors, ...validator(properties, specification)];
-  }, []);
+  }, []).map(prependPath("Properties"));
 }
 
 //resource errors for a single property of a resource
@@ -49,7 +50,7 @@ type PropertyValidator = (
   property: { [key: string]: mixed },
   resourceTypeName: string,
   specification: Specification
-) => TemplateError[];
+) => TemplateIssue[];
 
 import getInvalidPropertiesErrors from "./invalidProperties";
 import getUnknownPropertiesErrors from "./unknownProperties";
@@ -63,8 +64,8 @@ export function getPropertyErrors(
   property: { [key: string]: mixed },
   resourceTypeName: string,
   specification: Specification
-): Array<TemplateError> {
+): Array<TemplateIssue> {
   return propertyValidators.reduce((errors, validator) => {
     return [...errors, ...validator(property, resourceTypeName, specification)];
-  }, []);
+  }, []).map(prependPath("Properties"));
 }

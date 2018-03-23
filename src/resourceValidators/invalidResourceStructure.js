@@ -2,10 +2,10 @@
 import { curry } from "lodash/fp";
 import type { PropertiesCollection, Specification } from "../specifications";
 import { makeResourceError } from "../errors";
-import type { TemplateError } from "../errors";
+import type { TemplateIssue } from "../errors";
 import type { Resource } from "../resource"
 
-export default function getInvalidStructureErrors(resource: Resource, specification: Specification): TemplateError[] {
+export default function getInvalidStructureErrors(resource: Resource, specification: Specification): TemplateIssue[] {
   return [...getMissingSectionErrors(resource, specification)]
 }
 

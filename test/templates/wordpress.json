@@ -272,7 +272,7 @@
       "WebServerGroup" : {
         "Type" : "AWS::AutoScaling::AutoScalingGroup",
         "Properties" : {
-          "AvailabilityZones" : { "Fn::GetAZs" : "" },
+          "AvailabilityZones" : ["asdf", "asdf", "asdf"],
           "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
           "MinSize" : "1",
           "MaxSize" : "5",
@@ -490,7 +490,7 @@
         "Type": "AWS::EC2::SecurityGroup",
         "Condition" : "Is-EC2-VPC",
         "Properties" : {
-          "GroupDescription": "Open database for access",
+          "GroupDescription":"ionno",
           "SecurityGroupIngress" : [{
             "IpProtocol" : "tcp",
             "FromPort" : "3306",

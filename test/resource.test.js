@@ -98,11 +98,11 @@ test("it finds an invalid property list of primitives", () => {
     }
   };
 
-  expect(getErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(5);
   expect(getErrors(resource2).length).toBe(1);
 });
 
-test("it finds an invalid property map of primitives", () => {
+test.only("it finds an invalid property map of primitives", () => {
   const resource = {
     Type: "AWS::CloudFormation::Stack",
     Properties: {
@@ -122,7 +122,7 @@ test("it finds an invalid property map of primitives", () => {
     }
   };
 
-  expect(getErrors(resource).length).toBe(1);
+  expect(getErrors(resource).length).toBe(2);
   expect(getErrors(resource2).length).toBe(1);
 });
 
