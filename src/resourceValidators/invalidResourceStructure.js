@@ -5,8 +5,6 @@ import { makeResourceError } from "../errors";
 import type { TemplateError } from "../errors";
 import type { Resource } from "../resource"
 
-
-
 export default function getInvalidStructureErrors(resource: Resource, specification: Specification): TemplateError[] {
   return [...getMissingSectionErrors(resource, specification)]
 }

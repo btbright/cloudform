@@ -8,7 +8,11 @@ import type {
 import { getResourceSpecification } from "./specifications";
 import type { TemplateError } from "./errors";
 import { makeResourceError, prependPath } from "./errors";
-import { getPropertyErrors, getPropertiesErrors, getResourceErrors } from "./resourceValidators";
+import {
+  getPropertyErrors,
+  getPropertiesErrors,
+  getResourceErrors
+} from "./resourceValidators";
 
 export type Resource = {
   Type: string,
@@ -18,34 +22,45 @@ export type Resource = {
 export function getErrors(resource: Resource) {
   const specification = getResourceSpecification(resource.Type);
   if (!specification) {
-    return [makeUnknownTypeError(resource.Type)]
+    return [makeUnknownTypeError(resource.Type)];
   }
   let errors = getResourceErrors(resource, specification);
-  if (resource.Properties){
-    errors = errors.concat(getPropertiesCollectionErrors(resource.Properties, specification, resource.Type))
+  if (resource.Properties) {
+    errors = errors.concat(
+      getPropertiesCollectionErrors(
+        resource.Properties,
+        specification,
+        resource.Type
+      )
+    );
   }
 
   return errors;
 }
 
-function makeUnknownTypeError(typeName: string){
-  return makeResourceError(`Unknown resource type: ${typeName}`, "UnknownResourceType")
+function makeUnknownTypeError(typeName: string) {
+  return makeResourceError(
+    `Unknown resource type: ${typeName}`,
+    "UnknownResourceType"
+  );
 }
 
-export function getPropertiesCollectionErrors(properties: PropertiesCollection<mixed>, specification: Specification, resourceType: string){
-  let errors = Object.keys(properties).reduce(
-    (newErrors, propertyKey) => {
-      return [
-        ...newErrors,
-        ...getPropertyErrors(
-          { [propertyKey]: properties[propertyKey] },
-          resourceType,
-          specification
-        )
-      ];
-    },
-    []
-  );
+//errors concerned only with collection of properties 
+export function getPropertiesCollectionErrors(
+  properties: PropertiesCollection<mixed>,
+  specification: Specification,
+  resourceType: string
+) {
+  let errors = Object.keys(properties).reduce((newErrors, propertyKey) => {
+    return [
+      ...newErrors,
+      ...getPropertyErrors(
+        { [propertyKey]: properties[propertyKey] },
+        resourceType,
+        specification
+      )
+    ];
+  }, []);
 
   return [...errors, ...getPropertiesErrors(properties, specification)];
 }

@@ -4,7 +4,6 @@ import { curry } from "lodash/fp";
 import type { PropertiesCollection, Specification } from "../specifications";
 import { makeResourceError } from "../errors";
 import type { TemplateError, ErrorGenerator } from "../errors";
-import { getPropertyIntersectionError } from "./";
 import type { Resource } from "../resource";
 
 //resources must have all required attributes defined in the specification

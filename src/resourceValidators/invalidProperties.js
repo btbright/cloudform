@@ -2,13 +2,12 @@
 import { curry } from "lodash/fp";
 import { getPropertySpecification } from "../specifications";
 import type {
-  PropertiesCollection,
   Specification,
   ResourceProperties
 } from "../specifications";
 import { makeResourceError, prependPath } from "../errors";
-import type { TemplateError, ErrorGenerator } from "../errors";
-import { getPropertyIntersectionError, getPropertyErrors } from "./";
+import type { TemplateError } from "../errors";
+import { getPropertyErrors } from "./";
 import { getPropertiesCollectionErrors } from "../resource";
 import {
   isArrayReturningFunction,
