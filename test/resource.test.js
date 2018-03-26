@@ -102,14 +102,14 @@ test("it finds an invalid property list of primitives", () => {
   expect(getErrors(resource2).length).toBe(1);
 });
 
-test.only("it finds an invalid property map of primitives", () => {
+test("it finds an invalid property map of primitives", () => {
   const resource = {
     Type: "AWS::CloudFormation::Stack",
     Properties: {
       TemplateURL: "http://test.com",
       Parameters: {
-        test: 4,
-        test2: 5
+        test: true,
+        test2: 6
       }
     }
   };
@@ -165,13 +165,13 @@ test("it finds an invalid typed property item in a list", () => {
           IpProtocol: true,
           FromPort: "80",
           ToPort: "80",
-          CidrIp: { Ref: "SSHLocation" }
+          CidrIp: "asdf"
         },
         {
           IpProtocol: "tcp",
           FromPort: "22",
           ToPort: "22",
-          CidrIp: { Ref: "SSHLocation" }
+          CidrIp: "asdf"
         }
       ]
     }
@@ -190,18 +190,17 @@ test("it finds a missing property on a typed property item in a list", () => {
         {
           FromPort: "80",
           ToPort: "80",
-          CidrIp: { Ref: "SSHLocation" }
+          CidrIp: "asdf"
         },
         {
           IpProtocol: "tcp",
           FromPort: "22",
           ToPort: "22",
-          CidrIp: { Ref: "SSHLocation" }
+          CidrIp: "asdf"
         }
       ]
     }
   };
-
   expect(getErrors(resource).length).toBe(1);
 });
 

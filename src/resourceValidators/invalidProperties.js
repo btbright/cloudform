@@ -137,7 +137,7 @@ function getPrimitiveListErrors(
   if (isArrayReturningFunction(property)) {
     return [invalidTypeError.toResolvable(isTemplateStructureError)];
   }
-  //this is handling invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
+  //this is handling non-list, invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
   if (!Array.isArray(property)) return [invalidTypeError];
 
   return property.reduce((errors, propertyItem, i) => {

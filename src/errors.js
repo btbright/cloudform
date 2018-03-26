@@ -48,6 +48,12 @@ class TemplateIssue {
   }
 }
 
+/*
+  resolvable issues are created when a validator doesn't
+  have enough information to determine a result so it provides
+  a function that can be passed a template that will give the
+  final result. they get resolved at the template level
+*/
 class ResolvableTemplateIssue extends TemplateIssue {
   resolutionFn: ResolutionFunction;
 

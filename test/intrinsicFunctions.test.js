@@ -1,6 +1,8 @@
 import {
   isIntrinsicFunction,
-  isArrayReturningFunction
+  isArrayReturningFunction,
+  doesPropertyExist,
+  getGetAttError
 } from "../src/intrinsicFunctions";
 
 const fnKeys = [
@@ -44,4 +46,131 @@ test("finds array returning functions", () => {
 
 test("rejects non array returning function", () => {
   expect(isArrayReturningFunction({ Ref: 54 })).toBe(false);
+});
+
+test("that a resource's property's existence can be validated", () => {
+  const resources = {
+    TestResource: {
+      TestProperty: 234
+    }
+  };
+  expect(doesPropertyExist(resources, "TestResource", "TestProperty")).toBe(
+    true
+  );
+});
+
+test("that a resource's missing property's existence can be validated", () => {
+  const resources = {
+    TestResource: {
+      TestProperty: 234
+    }
+  };
+  expect(doesPropertyExist(resources, "TestResource", "NotATestProperty")).toBe(
+    false
+  );
+});
+
+test("getGetAttError: returns no errors in valid case", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
+  expect(getGetAttError(template, getAtt, "String")).toBeFalsy();
+});
+
+test("getGetAttError: return an error when the resource doesn't exist", () => {
+  const template = {
+    Resources: {
+      Test2: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("MissingReferencedResource");
+});
+
+test("getGetAttError: return an error when the referenced property doesn't exist", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Nope: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("MissingReferencedProperty");
+});
+
+test("getGetAttError: return an error when the referenced property isn't in the resource's attributes spec", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "Nope"] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("InvalidResourceAttribute");
+});
+
+test("getGetAttError: return an error when the referenced property isn't the right type", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
+  expect(getGetAttError(template, getAtt, "Integer").type).toBe("InvalidResourceAttributeType");
+});
+
+test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function in the resource name", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": [{"Ref": "NotReal"}, "Name"] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function other than ref in the attribute name", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", {"Fn::GetAtt": ["tes", "asd"]}] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+
+test("getGetAttError: return an error when Fn:GetAtt has the wrong types as args", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine",
+        Name: "test"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", 234] };
+  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
 });
