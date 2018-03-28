@@ -1,5 +1,3 @@
-// @flow
-
 import { getTemplateIssues } from "../src/";
 import wordpressTemplate from "./templates/wordpress.json"
 

@@ -1,5 +1,5 @@
 // @flow
-import type { Template } from "../index";
+import type { Template } from "./index";
 import type { TemplateIssue } from "./errors";
 import { makeResourceError } from "./errors";
 import type { Resource } from "./resource";
@@ -33,12 +33,12 @@ export function isTemplateStructureError(template: Template): boolean {
 
 export function getIntrinsicFunctionPrimitivePropertyIssues(
   primitiveType: string,
-  property: mixed
+  property: { [key: string]: { [key: string]: mixed } }
 ): (mixed, mixed) => ?TemplateIssue {
   return template => {
     const intrinsicFunctionKey = getIntrinsicFunctionKey(property);
     if (intrinsicFunctionKey === "Fn::GetAtt") {
-      return getGetAttErrors(template, property, primitiveType);
+      return getGetAttError(template, property, primitiveType);
     }
   };
 }
@@ -59,28 +59,61 @@ export function doesPropertyExist(
   return typeof resources[resourceName][propertyName] !== "undefined";
 }
 
-export function getGetAttError(
+export function getRefError(
   template: Template,
   property: { [key: string]: mixed },
   primitiveType: string
 ): ?TemplateIssue {
+  const referencedResourceName = property["Ref"];
+  if (isIntrinsicFunction(referencedResourceName)) {
+    return makeInvalidFunctionUsage(
+      `Functions can not be used in the Ref function. The name must be a "string that is a resource logical ID"`
+    );
+  }
+
+  if (typeof referencedResourceName !== "string"){
+    return makeInvalidFunctionUsage(
+      `In a Ref function, the referenced logical resource name must be a string`
+    );
+  }
+
+  if (!doesResourceExist(template.Resources, referencedResourceName)) {
+    return makeMissingReferencedResourceError(referencedResourceName);
+  }
+
+  //todo - match return type of referenced type to needed
+}
+
+export function getGetAttError(
+  template: Template,
+  property: { [key: string]: { [key: string]: mixed } },
+  primitiveType: string
+): ?TemplateIssue {
   const [resourceName, propertyName] = property["Fn::GetAtt"];
 
-  if (isIntrinsicFunction(resourceName)){
-    return makeInvalidFunctionUsage(`Functions can not be used for the Fn::GetAtt logical resource name`)
+  if (isIntrinsicFunction(resourceName)) {
+    return makeInvalidFunctionUsage(
+      `Functions can not be used for the Fn::GetAtt logical resource name`
+    );
   }
 
   const propertyNameIntrinsicKey = getIntrinsicFunctionKey(propertyName);
-  if (propertyNameIntrinsicKey && propertyNameIntrinsicKey !== "Ref"){
-    return makeInvalidFunctionUsage(`Only 'Ref' function can be used for Fn::GetAtt attribute name`)
+  if (propertyNameIntrinsicKey && propertyNameIntrinsicKey !== "Ref") {
+    return makeInvalidFunctionUsage(
+      `Only 'Ref' function can be used for Fn::GetAtt attribute name`
+    );
   }
 
-  if (typeof resourceName !== "string"){
-    return makeInvalidFunctionUsage(`The Fn::GetAtt logical resource name must be a string`)
+  if (typeof resourceName !== "string") {
+    return makeInvalidFunctionUsage(
+      `The Fn::GetAtt logical resource name must be a string`
+    );
   }
 
-  if (typeof propertyName !== "string"){
-    return makeInvalidFunctionUsage(`The Fn::GetAtt attribute name must be a string or a Ref function`)
+  if (typeof propertyName !== "string") {
+    return makeInvalidFunctionUsage(
+      `The Fn::GetAtt attribute name must be a string or a Ref function`
+    );
   }
 
   if (!doesResourceExist(template.Resources, resourceName)) {
@@ -88,11 +121,16 @@ export function getGetAttError(
   }
   const resourceType = template.Resources[resourceName].Type;
   const resourceSpecification = getResourceSpecification(resourceType);
+
+  if (!resourceSpecification.Attributes) {
+    return makeInvalidResourceAttributeError(resourceType, propertyName);
+  }
+
   const attributeSpecification = resourceSpecification.Attributes[propertyName];
 
   //does exist in attributes spec?
   if (!attributeSpecification) {
-    return makeInvalidResourceAttributeError(resourceType);
+    return makeInvalidResourceAttributeError(resourceType, propertyName);
   }
 
   //is it the right type?
@@ -105,39 +143,47 @@ export function getGetAttError(
   }
 
   if (!doesPropertyExist(template.Resources, resourceName, propertyName)) {
-    return makeMissingReferencedPropertyError(resourceName);
+    return makeMissingReferencedPropertyError(resourceName, propertyName);
   }
 }
 
-const makeInvalidFunctionUsage = explanation =>
+const makeInvalidFunctionUsage = (explanation): TemplateIssue =>
   makeResourceError(
     `Improper use of intrinsic function: ${explanation}`,
     "ImproperIntrinsicFunctionUsage"
   );
 
 const makeInvalidResourceAttributeTypeError = (
-  resourceType,
-  correctType,
-  foundType
-) =>
+  resourceType: string,
+  correctType: string,
+  foundType: string
+): TemplateIssue =>
   makeResourceError(
     `Referenced attribute of resource type '${resourceType}' is not a valid type: expected a '${correctType}' but got a '${foundType}'`,
     "InvalidResourceAttributeType"
   );
 
-const makeInvalidResourceAttributeError = (resourceType, attributeName) =>
+const makeInvalidResourceAttributeError = (
+  resourceType: string,
+  attributeName: string
+): TemplateIssue =>
   makeResourceError(
     `Referenced attribute of resource type '${resourceType}' is not valid: '${attributeName}'`,
     "InvalidResourceAttribute"
   );
 
-const makeMissingReferencedResourceError = resourceName =>
+const makeMissingReferencedResourceError = (
+  resourceName: string
+): TemplateIssue =>
   makeResourceError(
     `Referenced resource does not exist: '${resourceName}'`,
     "MissingReferencedResource"
   );
 
-const makeMissingReferencedPropertyError = (resourceName, propertyName) =>
+const makeMissingReferencedPropertyError = (
+  resourceName: string,
+  propertyName: string
+): TemplateIssue =>
   makeResourceError(
     `Referenced property does not exist on resource '${resourceName}': '${propertyName}'`,
     "MissingReferencedProperty"

@@ -78,7 +78,7 @@ export const makeResourceError = (
   errorString: string,
   type: string,
   path: string
-) => new TemplateIssue(errorString, type, path);
+): TemplateIssue => new TemplateIssue(errorString, type, path);
 
 export const prependPath = curry((path, error) => error.prependPath(path));
 

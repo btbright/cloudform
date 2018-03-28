@@ -1,6 +1,14 @@
 [ignore]
+.*node_modules/webpack.*
+.*node_modules/webpack-cli.*
+.*node_modules/babel-cli.*
+.*node_modules/babel-core.*
+.*node_modules/babel-jest.*
+.*node_modules/babel-loader.*
+.*node_modules/babel-preset-env.*
 
 [include]
+./src/.*
 
 [libs]
 

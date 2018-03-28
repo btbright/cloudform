@@ -2,7 +2,8 @@ import {
   isIntrinsicFunction,
   isArrayReturningFunction,
   doesPropertyExist,
-  getGetAttError
+  getGetAttError,
+  getRefError
 } from "../src/intrinsicFunctions";
 
 const fnKeys = [
@@ -161,7 +162,6 @@ test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function 
   expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
 });
 
-
 test("getGetAttError: return an error when Fn:GetAtt has the wrong types as args", () => {
   const template = {
     Resources: {
@@ -174,3 +174,76 @@ test("getGetAttError: return an error when Fn:GetAtt has the wrong types as args
   const getAtt = { "Fn::GetAtt": ["Test", 234] };
   expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
 });
+
+test("getRefError: return no errors in a valid case", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": "Test" };
+  expect(getRefError(template, ref, "String")).toBeFalsy();
+});
+
+test("getRefError: finds illegal use of a sub function", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": { "Ref": "test" } };
+  expect(getRefError(template, ref, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds illegal use of a sub function", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": { "Ref": "test" } };
+  expect(getRefError(template, ref, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds wrong type in ref resource name argument", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": 122359 };
+  expect(getRefError(template, ref, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds a missing resource error", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": "NotReal" };
+  expect(getRefError(template, ref, "String").type).toBe("MissingReferencedResource");
+});
+
+test("getRefError: finds a missing resource error", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Ref": "NotReal" };
+  expect(getRefError(template, ref, "String").type).toBe("MissingReferencedResource");
+});
+
