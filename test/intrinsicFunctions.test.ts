@@ -1,8 +1,8 @@
 import {
-  isIntrinsicFunction,
-  isArrayReturningFunction,
   doesPropertyExist,
-  getGetAttError
+  getGetAttError,
+  isArrayReturningFunction,
+  isIntrinsicFunction
 } from "../src/intrinsicFunctions";
 
 const fnKeys = [
@@ -51,7 +51,8 @@ test("rejects non array returning function", () => {
 test("that a resource's property's existence can be validated", () => {
   const resources = {
     TestResource: {
-      TestProperty: 234
+      Properties: { TestProperty: 234 },
+      Type: "sdf"
     }
   };
   expect(doesPropertyExist(resources, "TestResource", "TestProperty")).toBe(
@@ -62,7 +63,8 @@ test("that a resource's property's existence can be validated", () => {
 test("that a resource's missing property's existence can be validated", () => {
   const resources = {
     TestResource: {
-      TestProperty: 234
+      Properties: { TestProperty: 234 },
+      Type: "test"
     }
   };
   expect(doesPropertyExist(resources, "TestResource", "NotATestProperty")).toBe(
@@ -74,8 +76,8 @@ test("getGetAttError: returns no errors in valid case", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
@@ -87,90 +89,96 @@ test("getGetAttError: return an error when the resource doesn't exist", () => {
   const template = {
     Resources: {
       Test2: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("MissingReferencedResource");
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("MissingReferencedResource");
 });
 
 test("getGetAttError: return an error when the referenced property doesn't exist", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Nope: "test"
+        Properties: { Nope: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("MissingReferencedProperty");
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("MissingReferencedProperty");
 });
 
 test("getGetAttError: return an error when the referenced property isn't in the resource's attributes spec", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Nope"] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("InvalidResourceAttribute");
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("InvalidResourceAttribute");
 });
 
 test("getGetAttError: return an error when the referenced property isn't the right type", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "Name" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  expect(getGetAttError(template, getAtt, "Integer").type).toBe("InvalidResourceAttributeType");
+  const error = getGetAttError(template, getAtt, "Integer");
+  expect(error && error.type).toBe("InvalidResourceAttributeType");
 });
 
 test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function in the resource name", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
-  const getAtt = { "Fn::GetAtt": [{"Ref": "NotReal"}, "Name"] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+  const getAtt = { "Fn::GetAtt": [{ Ref: "NotReal" }, "Name"] };
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
 });
 
 test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function other than ref in the attribute name", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
-  const getAtt = { "Fn::GetAtt": ["Test", {"Fn::GetAtt": ["tes", "asd"]}] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+  const getAtt = { "Fn::GetAtt": ["Test", { "Fn::GetAtt": ["tes", "asd"] }] };
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
 });
-
 
 test("getGetAttError: return an error when Fn:GetAtt has the wrong types as args", () => {
   const template = {
     Resources: {
       Test: {
-        Type: "AWS::StepFunctions::StateMachine",
-        Name: "test"
+        Properties: { Name: "test" },
+        Type: "AWS::StepFunctions::StateMachine"
       }
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", 234] };
-  expect(getGetAttError(template, getAtt, "String").type).toBe("ImproperIntrinsicFunctionUsage");
+  const error = getGetAttError(template, getAtt, "String");
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
 });

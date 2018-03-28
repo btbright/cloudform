@@ -2,11 +2,11 @@ import { getErrors } from "../src/resource";
 
 test("it returns no errors with a simple resource", () => {
   const resource = {
-    Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: "database access"
-    }
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
   expect(getErrors(resource).length).toBe(0);
 });
@@ -14,13 +14,15 @@ test("it returns no errors with a simple resource", () => {
 
 test("it finds an invalid resource type", () => {
   const resource = {
-    Type: "AWS::SSM::NotAType"
+    Properties: {},
+    Type: "AWS::SSM::NotAType",
   };
   expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds missing properties", () => {
   const resource = {
+    Properties: {},
     Type: "AWS::SSM::Association"
   };
   expect(getErrors(resource).length).toBe(1);
@@ -28,50 +30,50 @@ test("it finds missing properties", () => {
 
 test("it finds a missing property", () => {
   const resource = {
-    Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}]
-    }
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
   expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds an unknown property", () => {
-  const resource = {
-    Type: "AWS::RDS::DBSecurityGroup",
+  const resource = {    
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}],
       GroupDescription: "database access",
       Invalid: {
         ImNotReal: 3
       }
-    }
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
   expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds an invalid property primitive: should be string", () => {
-  const resource = {
-    Type: "AWS::RDS::DBSecurityGroup",
+  const resource = { 
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}],
-      GroupDescription: true //should be "database access"
-    }
+      GroupDescription: true // should be "database access"
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
 
   const resource2 = {
-    Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}],
-      GroupDescription: [true] //should be "database access"
-    }
+      GroupDescription: [true] // should be "database access"
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
   const resource3 = {
-    Type: "AWS::RDS::DBSecurityGroup",
     Properties: {
       DBSecurityGroupIngress: [{CIDRIP: "test"}],
-      GroupDescription: { test: true } //should be "database access"
-    }
+      GroupDescription: { test: true } // should be "database access"
+    },
+    Type: "AWS::RDS::DBSecurityGroup",
   };
 
   expect(getErrors(resource).length).toBe(1);
@@ -81,21 +83,21 @@ test("it finds an invalid property primitive: should be string", () => {
 
 test("it finds an invalid property list of primitives", () => {
   const resource = {
-    Type: "AWS::AutoScaling::AutoScalingGroup",
     Properties: {
-      AvailabilityZones: [1, 2, 3, 4, 5], //should be strings
+      AvailabilityZones: [1, 2, 3, 4, 5], // should be strings
+      MaxSize: "5",
       MinSize: "1",
-      MaxSize: "5"
-    }
+    },
+    Type: "AWS::AutoScaling::AutoScalingGroup",
   };
 
   const resource2 = {
-    Type: "AWS::AutoScaling::AutoScalingGroup",
     Properties: {
-      AvailabilityZones: true, //should be strings
+      AvailabilityZones: true, // should be strings
+      MaxSize: "5",
       MinSize: "1",
-      MaxSize: "5"
-    }
+    },
+    Type: "AWS::AutoScaling::AutoScalingGroup",
   };
 
   expect(getErrors(resource).length).toBe(5);
@@ -104,22 +106,22 @@ test("it finds an invalid property list of primitives", () => {
 
 test("it finds an invalid property map of primitives", () => {
   const resource = {
-    Type: "AWS::CloudFormation::Stack",
     Properties: {
-      TemplateURL: "http://test.com",
       Parameters: {
         test: true,
         test2: 6
-      }
-    }
+      },
+      TemplateURL: "http://test.com",
+    },
+    Type: "AWS::CloudFormation::Stack",
   };
 
   const resource2 = {
-    Type: "AWS::CloudFormation::Stack",
     Properties: {
+      Parameters: true,
       TemplateURL: "http://test.com",
-      Parameters: true
-    }
+    },
+    Type: "AWS::CloudFormation::Stack",
   };
 
   expect(getErrors(resource).length).toBe(2);
@@ -128,12 +130,12 @@ test("it finds an invalid property map of primitives", () => {
 
 test("it finds an invalid typed property", () => {
   const resource = {
-    Type: "AWS::ApplicationAutoScaling::ScalingPolicy",
     Properties: {
       PolicyName: "test",
       PolicyType: "test",
       StepScalingPolicyConfiguration: true
-    }
+    },
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy",
   };
 
   expect(getErrors(resource).length).toBe(1);
@@ -141,14 +143,14 @@ test("it finds an invalid typed property", () => {
 
 test("it finds a typed property with invalid properties", () => {
   const resource = {
-    Type: "AWS::ApplicationAutoScaling::ScalingPolicy",
     Properties: {
       PolicyName: "test",
       PolicyType: "test",
       StepScalingPolicyConfiguration: {
         MetricAggregationType: true
       }
-    }
+    },
+    Type: "AWS::ApplicationAutoScaling::ScalingPolicy",
   };
 
   expect(getErrors(resource).length).toBe(1);
@@ -156,25 +158,25 @@ test("it finds a typed property with invalid properties", () => {
 
 test("it finds an invalid typed property item in a list", () => {
   const resource = {
-    Type: "AWS::EC2::SecurityGroup",
     Properties: {
       GroupDescription:
         "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
       SecurityGroupIngress: [
         {
-          IpProtocol: true,
+          CidrIp: "asdf",
           FromPort: "80",
+          IpProtocol: true,
           ToPort: "80",
-          CidrIp: "asdf"
         },
         {
-          IpProtocol: "tcp",
+          CidrIp: "asdf",
           FromPort: "22",
+          IpProtocol: "tcp",
           ToPort: "22",
-          CidrIp: "asdf"
         }
       ]
-    }
+    },
+    Type: "AWS::EC2::SecurityGroup",
   };
 
   expect(getErrors(resource).length).toBe(1);
@@ -182,31 +184,30 @@ test("it finds an invalid typed property item in a list", () => {
 
 test("it finds a missing property on a typed property item in a list", () => {
   const resource = {
-    Type: "AWS::EC2::SecurityGroup",
     Properties: {
       GroupDescription:
         "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
       SecurityGroupIngress: [
         {
+          CidrIp: "asdf",
           FromPort: "80",
           ToPort: "80",
-          CidrIp: "asdf"
         },
         {
-          IpProtocol: "tcp",
+          CidrIp: "asdf",
           FromPort: "22",
+          IpProtocol: "tcp",
           ToPort: "22",
-          CidrIp: "asdf"
         }
       ]
-    }
+    },
+    Type: "AWS::EC2::SecurityGroup",
   };
   expect(getErrors(resource).length).toBe(1);
 });
 
 test("it finds an invalid typed property item in a map", () => {
-  const resource = {
-    Type: "AWS::SSM::Association",
+  const resource = {    
     Properties: {
       Name: "Test",
       Parameters: {
@@ -214,7 +215,8 @@ test("it finds an invalid typed property item in a map", () => {
           ParameterValues: [true]
         }
       }
-    }
+    },
+    Type: "AWS::SSM::Association",
   };
 
   expect(getErrors(resource).length).toBe(1);

@@ -1,16 +1,13 @@
 // @flow
-import { curry } from "lodash/fp";
-import { getPropertySpecification } from "../specifications";
-import type { Specification, ResourceProperties } from "../specifications";
-import { makeResourceError, prependPath } from "../errors";
-import type { TemplateIssue } from "../errors";
-import { getPropertyErrors } from "./";
-import { getPropertiesCollectionErrors } from "../resource";
+import { makeResourceError, prependPath, TemplateIssue } from "../errors";
 import {
   isArrayReturningFunction,
   isIntrinsicFunction,
   isTemplateStructureError
 } from "../intrinsicFunctions";
+import { getPropertiesCollectionErrors } from "../resource";
+import { getPropertySpecification, IResourceProperties, ISpecification } from "../specifications";
+import { getPropertyErrors } from "./";
 
 const validators = [
   getPrimitivePropertyErrors,
@@ -21,17 +18,19 @@ const validators = [
   getTypedMapPropertyErrors
 ];
 
-//checks all properties to ensure they match the specification
+// checks all properties to ensure they match the specification
 export default function getInvalidPropertiesErrors(
-  property: { [key: string]: mixed },
+  property: { [key: string]: any },
   resourceTypeName: string,
-  specification: Specification
-): Array<TemplateIssue> {
+  specification: ISpecification
+): TemplateIssue[] {
   const propertyName = Object.keys(property)[0];
-  if (!specification.Properties.hasOwnProperty(propertyName)) return [];
+  if (!specification.Properties.hasOwnProperty(propertyName)) {
+    return [];
+  }
   const propertySpecification = specification.Properties[propertyName];
   return validators
-    .reduce((newErrors, validator) => {
+    .reduce((newErrors: TemplateIssue[], validator) => {
       return [
         ...newErrors,
         ...validator(
@@ -52,11 +51,13 @@ export default function getInvalidPropertiesErrors(
      contain a proper property
 */
 function getPrimitivePropertyErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
-  if (!propertySpecification.PrimitiveType) return [];
+): TemplateIssue[] {
+  if (!propertySpecification.PrimitiveType) {
+    return [];
+  }
 
   return makePrimitivePropertyErrors(
     propertySpecification.PrimitiveType,
@@ -66,7 +67,7 @@ function getPrimitivePropertyErrors(
 
 function makePrimitivePropertyErrors(
   primitiveType: string,
-  property: mixed
+  property: any
 ): TemplateIssue[] {
   const error = makeInvalidPrimitivePropertyError(
     primitiveType,
@@ -79,29 +80,31 @@ function makePrimitivePropertyErrors(
   return !isPrimitiveTypeValueValid(property, primitiveType) ? [error] : [];
 }
 
-const makeInvalidPrimitivePropertyError = (correctType, instanceType) =>
+const makeInvalidPrimitivePropertyError = (correctType: string, instanceType: string) =>
   makeResourceError(
     `Should be of type '${correctType} but got '${instanceType}'`,
     "InvalidPrimitveProperty"
   );
 
 function getPrimitiveMapErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
+): TemplateIssue[] {
   if (
     propertySpecification.Type !== "Map" ||
     !propertySpecification.PrimitiveItemType
-  )
+  ) {
     return [];
+  }
 
-  if (typeof property !== "object")
+  if (typeof property !== "object") {
     return [
       makeInvalidPrimitiveMapError(propertySpecification.PrimitiveItemType)
     ];
+  }
 
-  return Object.keys(property).reduce((errors, propertyKey) => {
+  return Object.keys(property).reduce((errors: TemplateIssue[], propertyKey) => {
     const prop = property[propertyKey];
     return [
       ...errors,
@@ -113,22 +116,23 @@ function getPrimitiveMapErrors(
   }, []);
 }
 
-const makeInvalidPrimitiveMapError = correctType =>
+const makeInvalidPrimitiveMapError = (correctType: string) =>
   makeResourceError(
     `Should be of map with string keys and values of type '${correctType} but got...`,
     "InvalidPrimitveMap"
   );
 
 function getPrimitiveListErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
+): TemplateIssue[] {
   if (
     propertySpecification.Type !== "List" ||
     !propertySpecification.PrimitiveItemType
-  )
+  ) {
     return [];
+  }
 
   const invalidTypeError = makeInvalidPrimitiveListError(
     propertySpecification.PrimitiveItemType
@@ -137,8 +141,11 @@ function getPrimitiveListErrors(
   if (isArrayReturningFunction(property)) {
     return [invalidTypeError.toResolvable(isTemplateStructureError)];
   }
-  //this is handling non-list, invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
-  if (!Array.isArray(property)) return [invalidTypeError];
+  // this is handling non-list, invalid intrinsic functions, should
+  // return more info - e.g. "can't use Fn::Join here...""
+  if (!Array.isArray(property)) {
+    return [invalidTypeError];
+  }
 
   return property.reduce((errors, propertyItem, i) => {
     return [
@@ -151,31 +158,33 @@ function getPrimitiveListErrors(
   }, []);
 }
 
-const makeInvalidPrimitiveListError = correctType =>
+const makeInvalidPrimitiveListError = (correctType: string) =>
   makeResourceError(
     `Should be of list of type '${correctType} but got...`,
     "InvalidPrimitveList"
   );
 
-//note - this recursively calls getPropertiesErrors
-//to check nested type meets all properties requirements
+// note - this recursively calls getPropertiesErrors
+// to check nested type meets all properties requirements
 function getTypedPropertyErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
+): TemplateIssue[] {
   if (
     !propertySpecification.Type ||
     propertySpecification.Type === "Map" ||
     propertySpecification.Type === "List"
-  )
+  ) {
     return [];
+  }
 
   const propertyTypeSpecification = getPropertySpecification(
     `${resourceTypeName}.${propertySpecification.Type}`
   );
-  if (typeof property !== "object" || property === null)
+  if (typeof property !== "object" || property === null) {
     return [makeInvalidTypedPropertyError(typeof property)];
+  }
   return getPropertyErrors(
     property,
     resourceTypeName,
@@ -183,19 +192,23 @@ function getTypedPropertyErrors(
   );
 }
 
-const makeInvalidTypedPropertyError = instanceType =>
+const makeInvalidTypedPropertyError = (instanceType: string) =>
   makeResourceError(
     `Should be an object but got a '${instanceType}'`,
     "InvalidTypedProperty"
   );
 
 function getTypedListPropertyErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
-  if (!propertySpecification.ItemType || propertySpecification.Type !== "List")
+): TemplateIssue[] {
+  if (
+    !propertySpecification.ItemType ||
+    propertySpecification.Type !== "List"
+  ) {
     return [];
+  }
 
   const error = makeInvalidTypedListPropertyError(
     unwrap(propertySpecification.ItemType),
@@ -209,8 +222,10 @@ function getTypedListPropertyErrors(
   if (isArrayReturningFunction(property)) {
     return [error.toResolvable(isTemplateStructureError)];
   }
-  //this is handling invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
-  if (!Array.isArray(property)) return [error];
+  // this is handling invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
+  if (!Array.isArray(property)) {
+    return [error];
+  }
 
   return property.reduce((errors, item, i) => {
     return [
@@ -224,19 +239,20 @@ function getTypedListPropertyErrors(
   }, []);
 }
 
-const makeInvalidTypedListPropertyError = (itemType, instanceType) =>
+const makeInvalidTypedListPropertyError = (itemType: string, instanceType: string) =>
   makeResourceError(
     `Should be a list of '${itemType}' but found a '${instanceType}'`,
     "InvalidTypedListProperty"
   );
 
 function getTypedMapPropertyErrors(
-  propertySpecification: ResourceProperties,
-  property: mixed,
+  propertySpecification: IResourceProperties,
+  property: any,
   resourceTypeName: string
-): Array<TemplateIssue> {
-  if (!propertySpecification.ItemType || propertySpecification.Type !== "Map")
+): TemplateIssue[] {
+  if (!propertySpecification.ItemType || propertySpecification.Type !== "Map") {
     return [];
+  }
 
   const error = makeInvalidTypedMapPropertyError(
     unwrap(propertySpecification.ItemType),
@@ -246,9 +262,11 @@ function getTypedMapPropertyErrors(
   const propertyTypeSpecification = getPropertySpecification(
     `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
   );
-  if (typeof property !== "object") return [error];
+  if (typeof property !== "object") {
+    return [error];
+  }
 
-  return Object.keys(property).reduce((errors, itemKey) => {
+  return Object.keys(property).reduce((errors: TemplateIssue[], itemKey: string) => {
     const item = property[itemKey];
     return [
       ...errors,
@@ -261,7 +279,7 @@ function getTypedMapPropertyErrors(
   }, []);
 }
 
-const makeInvalidTypedMapPropertyError = (itemType, instanceType) =>
+const makeInvalidTypedMapPropertyError = (itemType: string, instanceType: string) =>
   makeResourceError(
     `Should be a map with values of '${itemType}' but found a '${instanceType}'`,
     "InvalidTypedMapProperty"
@@ -273,13 +291,10 @@ const makeInvalidTypedMapPropertyError = (itemType, instanceType) =>
 
 const integerStringRegex = /^[0-9]+$/;
 
-function isPrimitiveTypeValueValid(
-  property: mixed,
-  typeName: ?string
-): boolean {
+function isPrimitiveTypeValueValid(property: any, typeName: string): boolean {
   const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
   if (normalizedTypeName === "integer") {
-    return Number.isInteger(property) || integerStringRegex.test(property);
+    return typeof property === "number" || integerStringRegex.test(property);
   }
   if (normalizedTypeName === "boolean") {
     return (
@@ -291,7 +306,7 @@ function isPrimitiveTypeValueValid(
   return typeof property === normalizedTypeName;
 }
 
-function makeNormalizedPrimitiveTypeName(typeName: ?string): string {
+function makeNormalizedPrimitiveTypeName(typeName: string): string {
   if (typeof typeName !== "string") {
     return "unknown";
   }
@@ -308,6 +323,6 @@ function makeNormalizedPrimitiveTypeName(typeName: ?string): string {
   }
 }
 
-function unwrap(str: ?string): string {
+function unwrap(str: string): string {
   return !str ? "unknown" : str;
 }

@@ -1,19 +1,14 @@
-//@flow
+import { makeResourceError, TemplateIssue } from "../errors";
+import { IPropertiesCollection, ISpecification } from "../specifications";
 
-import { curry } from "lodash/fp";
-import type { PropertiesCollection, Specification } from "../specifications";
-import { makeResourceError } from "../errors";
-import type { TemplateIssue, ErrorGenerator } from "../errors";
-import type { Resource } from "../resource";
-
-//resources must have all required attributes defined in the specification
+// resources must have all required attributes defined in the specification
 export default function getMissingRequiredPropertiesErrors(
-  properties: PropertiesCollection<mixed>,
-  specification: Specification
+  properties: IPropertiesCollection<any>,
+  specification: ISpecification
 ): TemplateIssue[] {
   const propertyNames = Object.keys(properties);
   return getRequiredPropertyNames(specification).reduce(
-    (errors, requiredPropertyName) => {
+    (errors: TemplateIssue[], requiredPropertyName) => {
       return [
         ...errors,
         ...getRequiredPropertyError(propertyNames, requiredPropertyName)
@@ -33,13 +28,13 @@ function getRequiredPropertyError(
   return [];
 }
 
-function getRequiredPropertyNames(specification: Specification): string[] {
+function getRequiredPropertyNames(specification: ISpecification): string[] {
   return Object.keys(specification.Properties).filter(
-    propertyKey => specification.Properties[propertyKey].Required
+    (propertyKey: string) => specification.Properties[propertyKey].Required
   );
 }
 
-const makeMissingRequiredPropertyError = propertyName =>
+const makeMissingRequiredPropertyError = (propertyName: string) =>
   makeResourceError(
     `Missing property: ${propertyName}`,
     "MissingRequiredProperty"
