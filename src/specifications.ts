@@ -18,12 +18,12 @@ export interface IAttributeProperties {
 }
 
 export interface IResourceProperties {
-  Required: boolean;
-  DuplicatesAllowed: boolean;
-  ItemType: string;
-  PrimitiveType: string;
-  PrimitiveItemType: string;
-  Type: string;
+  Required?: boolean;
+  DuplicatesAllowed?: boolean;
+  ItemType?: string;
+  PrimitiveType?: string;
+  PrimitiveItemType?: string;
+  Type?: string;
 }
 
 export function getResourceSpecification(

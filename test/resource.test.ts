@@ -11,7 +11,6 @@ test("it returns no errors with a simple resource", () => {
   expect(getErrors(resource).length).toBe(0);
 });
 
-
 test("it finds an invalid resource type", () => {
   const resource = {
     Properties: {},

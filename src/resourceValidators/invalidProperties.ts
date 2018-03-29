@@ -211,12 +211,12 @@ function getTypedListPropertyErrors(
   }
 
   const error = makeInvalidTypedListPropertyError(
-    unwrap(propertySpecification.ItemType),
+    propertySpecification.ItemType,
     typeof property
   );
 
   const propertyTypeSpecification = getPropertySpecification(
-    `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
+    `${resourceTypeName}.${propertySpecification.ItemType}`
   );
 
   if (isArrayReturningFunction(property)) {
@@ -255,12 +255,12 @@ function getTypedMapPropertyErrors(
   }
 
   const error = makeInvalidTypedMapPropertyError(
-    unwrap(propertySpecification.ItemType),
+    propertySpecification.ItemType,
     typeof property
   );
 
   const propertyTypeSpecification = getPropertySpecification(
-    `${resourceTypeName}.${unwrap(propertySpecification.ItemType)}`
+    `${resourceTypeName}.${propertySpecification.ItemType}`
   );
   if (typeof property !== "object") {
     return [error];
@@ -294,7 +294,8 @@ const integerStringRegex = /^[0-9]+$/;
 function isPrimitiveTypeValueValid(property: any, typeName: string): boolean {
   const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
   if (normalizedTypeName === "integer") {
-    return typeof property === "number" || integerStringRegex.test(property);
+    // rejects non-int numbers and accepts int strings
+    return integerStringRegex.test(property.toString());
   }
   if (normalizedTypeName === "boolean") {
     return (
@@ -321,8 +322,4 @@ function makeNormalizedPrimitiveTypeName(typeName: string): string {
     default:
       return loweredTypeName;
   }
-}
-
-function unwrap(str: string): string {
-  return !str ? "unknown" : str;
 }

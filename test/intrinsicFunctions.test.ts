@@ -1,9 +1,11 @@
 import {
   doesPropertyExist,
-  getGetAttError,
+  getIntrinsicError,
   isArrayReturningFunction,
   isIntrinsicFunction
 } from "../src/intrinsicFunctions";
+import getGetAttError from "../src/intrinsicFunctions/validators/getAtt";
+import getRefError from "../src/intrinsicFunctions/validators/ref";
 
 const fnKeys = [
   "Fn::Base64",
@@ -82,7 +84,13 @@ test("getGetAttError: returns no errors in valid case", () => {
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  expect(getGetAttError(template, getAtt, "String")).toBeFalsy();
+  expect(
+    getGetAttError(
+      getAtt,
+      { Required: true, PrimitiveType: "String" },
+      template
+    )
+  ).toBeFalsy();
 });
 
 test("getGetAttError: return an error when the resource doesn't exist", () => {
@@ -95,22 +103,12 @@ test("getGetAttError: return an error when the resource doesn't exist", () => {
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  const error = getGetAttError(template, getAtt, "String");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
   expect(error && error.type).toBe("MissingReferencedResource");
-});
-
-test("getGetAttError: return an error when the referenced property doesn't exist", () => {
-  const template = {
-    Resources: {
-      Test: {
-        Properties: { Nope: "test" },
-        Type: "AWS::StepFunctions::StateMachine"
-      }
-    }
-  };
-  const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  const error = getGetAttError(template, getAtt, "String");
-  expect(error && error.type).toBe("MissingReferencedProperty");
 });
 
 test("getGetAttError: return an error when the referenced property isn't in the resource's attributes spec", () => {
@@ -123,7 +121,11 @@ test("getGetAttError: return an error when the referenced property isn't in the 
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Nope"] };
-  const error = getGetAttError(template, getAtt, "String");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
   expect(error && error.type).toBe("InvalidResourceAttribute");
 });
 
@@ -137,8 +139,50 @@ test("getGetAttError: return an error when the referenced property isn't the rig
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", "Name"] };
-  const error = getGetAttError(template, getAtt, "Integer");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "Integer" },
+    template
+  );
   expect(error && error.type).toBe("InvalidResourceAttributeType");
+});
+
+test("getGetAttError: does not return an error when the referenced property is a list of the right type", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: { Name: "Name" },
+        Type: "AWS::DirectoryService::MicrosoftAD"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "DnsIpAddresses"] };
+  const spec = {
+    PrimitiveItemType: "String",
+    Required: false,
+    Type: "List"
+  };
+  const error = getGetAttError(getAtt, spec, template);
+  expect(error).toBeFalsy();
+});
+
+test("getGetAttError: returns an error when the referenced property is not a list of the right type", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: { Name: "Name" },
+        Type: "AWS::DirectoryService::MicrosoftAD"
+      }
+    }
+  };
+  const getAtt = { "Fn::GetAtt": ["Test", "DnsIpAddresses"] };
+  const spec = {
+    PrimitiveItemType: "String",
+    Required: false,
+    Type: "List"
+  };
+  const error = getGetAttError(getAtt, spec, template);
+  expect(error).toBeFalsy();
 });
 
 test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function in the resource name", () => {
@@ -151,7 +195,11 @@ test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function 
     }
   };
   const getAtt = { "Fn::GetAtt": [{ Ref: "NotReal" }, "Name"] };
-  const error = getGetAttError(template, getAtt, "String");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
   expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
 });
 
@@ -165,7 +213,11 @@ test("getGetAttError: return an error when Fn:GetAtt uses an intrinsic function 
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", { "Fn::GetAtt": ["tes", "asd"] }] };
-  const error = getGetAttError(template, getAtt, "String");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
   expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
 });
 
@@ -179,6 +231,185 @@ test("getGetAttError: return an error when Fn:GetAtt has the wrong types as args
     }
   };
   const getAtt = { "Fn::GetAtt": ["Test", 234] };
-  const error = getGetAttError(template, getAtt, "String");
+  const error = getGetAttError(
+    getAtt,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
   expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: return no errors in a valid case", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: "Test" };
+  expect(
+    getRefError(ref, { Required: true, PrimitiveType: "String" }, template)
+  ).toBeFalsy();
+});
+
+test("getRefError: finds illegal use of a sub function", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: { Ref: "test" } };
+  const error = getRefError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds illegal use of a sub function", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: { Ref: "test" } };
+  const error = getRefError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds wrong type in ref resource name argument", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: 122359 };
+  const error = getRefError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("ImproperIntrinsicFunctionUsage");
+});
+
+test("getRefError: finds a missing resource error", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: "NotReal" };
+  const error = getRefError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("MissingReferencedResource");
+});
+
+test("getRefError: finds a missing resource error", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: "NotReal" };
+  const error = getRefError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("MissingReferencedResource");
+});
+
+test("getIntrinsicError: finds missing reference", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {},
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { Ref: "NotReal" };
+  const error = getIntrinsicError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+  expect(error && error.type).toBe("MissingReferencedResource");
+});
+
+test("getIntrinsicError: finds a nested missing reference", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {
+          Name: "This"
+        },
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  const ref = { "Fn::GetAtt": ["Test", { "Ref": "Test2" }] };
+  const error = getIntrinsicError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+
+  expect(error && error.type).toBe("MissingReferencedResource");
+
+  const ref2 = { "Fn::Split": [",", { "Fn::GetAtt": ["Test", { "Ref": "Test2" }] }] };
+  const error2 = getIntrinsicError(
+    ref,
+    { Type: "List", PrimitiveItemType: "String" },
+    template
+  );
+
+  expect(error2 && error2.type).toBe("MissingReferencedResource");
+});
+
+test("getIntrinsicError: finds a Fn::Sub nested error", () => {
+  const template = {
+    Resources: {
+      Test: {
+        Properties: {
+          Name: "This"
+        },
+        Type: "AWS::StepFunctions::StateMachine"
+      }
+    }
+  };
+  // tslint:disable-next-line:no-invalid-template-strings
+  const ref = { "Fn::Sub": ["replacement string ${test}", { "test": { "Ref": "Test2" } }] };
+  const error = getIntrinsicError(
+    ref,
+    { Required: true, PrimitiveType: "String" },
+    template
+  );
+
+  expect(error && error.type).toBe("MissingReferencedResource");
 });
