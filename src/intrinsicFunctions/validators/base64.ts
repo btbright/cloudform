@@ -13,7 +13,7 @@ export default function getBase64Error(
   propertiesSpecification: IResourceProperties,
   template: ITemplate
 ): TemplateIssue | undefined {
-  const baseString = property["Fn::Sub"];
+  const baseString = property["Fn::Base64"];
 
   const intrinsicKey = getIntrinsicFunctionKey(baseString);
   if (intrinsicKey) {
@@ -27,6 +27,6 @@ export default function getBase64Error(
   }
 
   if (typeof baseString !== "string") {
-    return makeInvalidFunctionUsage(`The Fn::Sub delimiter must be a string`);
+    return makeInvalidFunctionUsage(`The Fn::Base64 delimiter must be a string`);
   }
 }

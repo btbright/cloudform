@@ -187,7 +187,7 @@
   },
 
   "Mappings": {
-    "AWSInstanceType2Arch": {
+    "CANTFINDME-AWSInstanceTypeArch": {
       "t1.micro": { "Arch": "PV64" },
       "t2.nano": { "Arch": "HVM64" },
       "t2.micro": { "Arch": "HVM64" },
@@ -412,7 +412,7 @@
           "Use install path for healthcheck to avoid redirects - ELB healthcheck does not handle 302 return codes"
       },
       "Properties": {
-        "AvailabilityZones": { "Fn::GetAZs": "us-east-1" },
+        "AvailabilityZones": { "Fn::GetAZs": "" },
         "CrossZone": "true",
         "LBCookieStickinessPolicy": [
           {
@@ -481,7 +481,7 @@
         },
         "InstanceType": { "Ref": "InstanceType" },
         "SecurityGroups": [{ "Ref": "WebServerSecurityGroup" }],
-        "KeyName": { "Ref": "KeyName" },
+        "KeyName": { "Ref": "KeyNam2e" },
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [

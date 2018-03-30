@@ -2,8 +2,13 @@ import { prependPath, resolveIssues, TemplateIssue } from "./errors";
 import { getErrors, IResource } from "./resource";
 
 export interface ITemplate {
-  Resources: { [key: string]: IResource }
+  Conditions?: { [key: string]: any },
+  Mappings?: { [key: string]: IMap },
+  Resources: { [key: string]: IResource },
+  Parameters?: { [key: string]: any }
 }
+
+export interface IMap { [key: string]: { [key: string]: any } }
 
 export function getTemplateIssues(template: ITemplate): TemplateIssue[] {
   let errors: TemplateIssue[] = [];

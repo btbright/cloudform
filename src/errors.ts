@@ -1,13 +1,13 @@
 import * as _ from "lodash";
 import { ITemplate } from "./index";
 
-export type ResolutionFunction = (template: ITemplate) => boolean;
+export type ResolutionFunction = (template: ITemplate) => TemplateIssue | undefined;
 
 export class TemplateIssue {
   public type: string;
   protected isError: boolean | undefined;
-  private errorString: string;
-  private path: string;
+  protected errorString: string;
+  protected path: string;
 
   constructor(errorString: string, type: string, path?: string) {
     this.errorString = errorString;
@@ -34,6 +34,10 @@ export class TemplateIssue {
       this.path
     }`;
     return this;
+  }
+
+  public setPath(path: string){
+    this.path = path;
   }
 
   public serialize() {
@@ -68,8 +72,11 @@ export class ResolvableTemplateIssue extends TemplateIssue {
   }
 
   public resolve(template: ITemplate) {
-    this.isError = this.resolutionFn(template);
-    return this;
+    const newError = this.resolutionFn(template);
+    if (newError){
+      newError.setPath(this.path);
+    }
+    return newError;
   }
 }
 
@@ -89,7 +96,7 @@ export const resolveIssues = (template: ITemplate) => (
 ) => {
   const resolvedIssue =
     issue instanceof ResolvableTemplateIssue ? issue.resolve(template) : issue;
-  if (resolvedIssue.hasError()) {
+  if (resolvedIssue && resolvedIssue.hasError()) {
     errors.push(resolvedIssue);
   }
   return errors;

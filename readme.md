@@ -1,7 +1,8 @@
 # todo
 
 - implement issue resolvers for validations:
--- finish intrinsics
+-- finish intrinsics - join, type check parameters refs
+-- conditional intrinsics check
 -- depends on
 
 - implement validations:

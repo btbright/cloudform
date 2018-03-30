@@ -1,12 +1,17 @@
 // @flow
 import { makeResourceError, prependPath, TemplateIssue } from "../errors";
 import {
-  isArrayReturningFunction,
+  getContingentIntrinsicError,
   isIntrinsicFunction,
   isTemplateStructureError
 } from "../intrinsicFunctions";
 import { getPropertiesCollectionErrors } from "../resource";
-import { getPropertySpecification, IResourceProperties, ISpecification } from "../specifications";
+import {
+  getPropertySpecification,
+  IResourceProperties,
+  ISpecification
+} from "../specifications";
+import { isPrimitiveTypeValueValid } from "../utilities/primitives";
 import { getPropertyErrors } from "./";
 
 const validators = [
@@ -59,28 +64,36 @@ function getPrimitivePropertyErrors(
     return [];
   }
 
-  return makePrimitivePropertyErrors(
-    propertySpecification.PrimitiveType,
-    property
-  );
+  return makePrimitivePropertyErrors(propertySpecification, property);
 }
 
 function makePrimitivePropertyErrors(
-  primitiveType: string,
+  propertySpecification: IResourceProperties,
   property: any
 ): TemplateIssue[] {
   const error = makeInvalidPrimitivePropertyError(
-    primitiveType,
+    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType,
     typeof property
   );
 
   if (isIntrinsicFunction(property)) {
-    return [error.toResolvable(isTemplateStructureError)];
+    return [error.toResolvable(
+      getContingentIntrinsicError(property, propertySpecification)
+    )]
   }
-  return !isPrimitiveTypeValueValid(property, primitiveType) ? [error] : [];
+
+  return !isPrimitiveTypeValueValid(
+    property,
+    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType
+  )
+    ? [error]
+    : [];
 }
 
-const makeInvalidPrimitivePropertyError = (correctType: string, instanceType: string) =>
+const makeInvalidPrimitivePropertyError = (
+  correctType: string,
+  instanceType: string
+) =>
   makeResourceError(
     `Should be of type '${correctType} but got '${instanceType}'`,
     "InvalidPrimitveProperty"
@@ -104,16 +117,18 @@ function getPrimitiveMapErrors(
     ];
   }
 
-  return Object.keys(property).reduce((errors: TemplateIssue[], propertyKey) => {
-    const prop = property[propertyKey];
-    return [
-      ...errors,
-      ...makePrimitivePropertyErrors(
-        propertySpecification.PrimitiveItemType,
-        prop
-      ).map(prependPath(propertyKey))
-    ];
-  }, []);
+  return Object.keys(property).reduce(
+    (errors: TemplateIssue[], propertyKey) => {
+      const prop = property[propertyKey];
+      return [
+        ...errors,
+        ...makePrimitivePropertyErrors(propertySpecification, prop).map(
+          prependPath(propertyKey)
+        )
+      ];
+    },
+    []
+  );
 }
 
 const makeInvalidPrimitiveMapError = (correctType: string) =>
@@ -127,6 +142,7 @@ function getPrimitiveListErrors(
   property: any,
   resourceTypeName: string
 ): TemplateIssue[] {
+  const listErrors = [];
   if (
     propertySpecification.Type !== "List" ||
     !propertySpecification.PrimitiveItemType
@@ -138,24 +154,26 @@ function getPrimitiveListErrors(
     propertySpecification.PrimitiveItemType
   );
 
-  if (isArrayReturningFunction(property)) {
-    return [invalidTypeError.toResolvable(isTemplateStructureError)];
-  }
-  // this is handling non-list, invalid intrinsic functions, should
-  // return more info - e.g. "can't use Fn::Join here...""
-  if (!Array.isArray(property)) {
+  if (isIntrinsicFunction(property)) {
+    const contingentIntrinsicErrorFn = getContingentIntrinsicError(
+      property,
+      propertySpecification
+    );
+    listErrors.push(invalidTypeError.toResolvable(contingentIntrinsicErrorFn));
+  } else if (!Array.isArray(property)) {
     return [invalidTypeError];
   }
+
+  if (isIntrinsicFunction(property)){ return listErrors;}
 
   return property.reduce((errors, propertyItem, i) => {
     return [
       ...errors,
-      ...makePrimitivePropertyErrors(
-        propertySpecification.PrimitiveItemType,
-        propertyItem
-      ).map(prependPath(`[${i}]`))
+      ...makePrimitivePropertyErrors(propertySpecification, propertyItem).map(
+        prependPath(`[${i}]`)
+      )
     ];
-  }, []);
+  }, listErrors);
 }
 
 const makeInvalidPrimitiveListError = (correctType: string) =>
@@ -203,6 +221,7 @@ function getTypedListPropertyErrors(
   property: any,
   resourceTypeName: string
 ): TemplateIssue[] {
+  const listErrors = [];
   if (
     !propertySpecification.ItemType ||
     propertySpecification.Type !== "List"
@@ -219,11 +238,13 @@ function getTypedListPropertyErrors(
     `${resourceTypeName}.${propertySpecification.ItemType}`
   );
 
-  if (isArrayReturningFunction(property)) {
-    return [error.toResolvable(isTemplateStructureError)];
-  }
-  // this is handling invalid intrinsic functions, should return more info - e.g. "can't use Fn::Join here...""
-  if (!Array.isArray(property)) {
+  if (isIntrinsicFunction(property)) {
+    const contingentIntrinsicErrorFn = getContingentIntrinsicError(
+      property,
+      propertySpecification
+    );
+    listErrors.push(error.toResolvable(contingentIntrinsicErrorFn));
+  } else if (!Array.isArray(property)) {
     return [error];
   }
 
@@ -236,10 +257,13 @@ function getTypedListPropertyErrors(
         resourceTypeName
       ).map(prependPath(`[${i}]`))
     ];
-  }, []);
+  }, listErrors);
 }
 
-const makeInvalidTypedListPropertyError = (itemType: string, instanceType: string) =>
+const makeInvalidTypedListPropertyError = (
+  itemType: string,
+  instanceType: string
+) =>
   makeResourceError(
     `Should be a list of '${itemType}' but found a '${instanceType}'`,
     "InvalidTypedListProperty"
@@ -266,60 +290,27 @@ function getTypedMapPropertyErrors(
     return [error];
   }
 
-  return Object.keys(property).reduce((errors: TemplateIssue[], itemKey: string) => {
-    const item = property[itemKey];
-    return [
-      ...errors,
-      ...getPropertiesCollectionErrors(
-        item,
-        propertyTypeSpecification,
-        resourceTypeName
-      ).map(prependPath(itemKey))
-    ];
-  }, []);
+  return Object.keys(property).reduce(
+    (errors: TemplateIssue[], itemKey: string) => {
+      const item = property[itemKey];
+      return [
+        ...errors,
+        ...getPropertiesCollectionErrors(
+          item,
+          propertyTypeSpecification,
+          resourceTypeName
+        ).map(prependPath(itemKey))
+      ];
+    },
+    []
+  );
 }
 
-const makeInvalidTypedMapPropertyError = (itemType: string, instanceType: string) =>
+const makeInvalidTypedMapPropertyError = (
+  itemType: string,
+  instanceType: string
+) =>
   makeResourceError(
     `Should be a map with values of '${itemType}' but found a '${instanceType}'`,
     "InvalidTypedMapProperty"
   );
-
-/*
-  Primitive utilities
-*/
-
-const integerStringRegex = /^[0-9]+$/;
-
-function isPrimitiveTypeValueValid(property: any, typeName: string): boolean {
-  const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
-  if (normalizedTypeName === "integer") {
-    // rejects non-int numbers and accepts int strings
-    return integerStringRegex.test(property.toString());
-  }
-  if (normalizedTypeName === "boolean") {
-    return (
-      typeof property === "boolean" ||
-      property === "true" ||
-      property === "false"
-    );
-  }
-  return typeof property === normalizedTypeName;
-}
-
-function makeNormalizedPrimitiveTypeName(typeName: string): string {
-  if (typeof typeName !== "string") {
-    return "unknown";
-  }
-  const loweredTypeName = typeName.toLowerCase();
-  switch (loweredTypeName) {
-    case "long":
-    case "double":
-    case "timestamp":
-      return "number";
-    case "json":
-      return "string";
-    default:
-      return loweredTypeName;
-  }
-}
