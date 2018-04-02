@@ -2,8 +2,7 @@
 import { makeResourceError, prependPath, TemplateIssue } from "../errors";
 import {
   getContingentIntrinsicError,
-  isIntrinsicFunction,
-  isTemplateStructureError
+  isIntrinsicFunction
 } from "../intrinsicFunctions";
 import { getPropertiesCollectionErrors } from "../resource";
 import {
@@ -72,7 +71,7 @@ function makePrimitivePropertyErrors(
   property: any
 ): TemplateIssue[] {
   const error = makeInvalidPrimitivePropertyError(
-    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType,
+    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType || "unknown",
     typeof property
   );
 
@@ -84,7 +83,7 @@ function makePrimitivePropertyErrors(
 
   return !isPrimitiveTypeValueValid(
     property,
-    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType
+    propertySpecification.PrimitiveType || propertySpecification.PrimitiveItemType || "unknown"
   )
     ? [error]
     : [];
@@ -166,7 +165,7 @@ function getPrimitiveListErrors(
 
   if (isIntrinsicFunction(property)){ return listErrors;}
 
-  return property.reduce((errors, propertyItem, i) => {
+  return property.reduce((errors: TemplateIssue[], propertyItem: any, i: number) => {
     return [
       ...errors,
       ...makePrimitivePropertyErrors(propertySpecification, propertyItem).map(
@@ -248,7 +247,7 @@ function getTypedListPropertyErrors(
     return [error];
   }
 
-  return property.reduce((errors, item, i) => {
+  return property.reduce((errors: TemplateIssue[], item: any, i: number) => {
     return [
       ...errors,
       ...getPropertiesCollectionErrors(

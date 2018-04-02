@@ -3,11 +3,11 @@ const path = require("path");
 const config = {
   entry: "./src/index.ts",
   mode: "development",
+  target: "node",
   devtool: 'inline-source-map',
   output: {
     library: "cloudform",
-    libraryTarget: "umd",
-    filename: "dist/cloudform.js"
+    filename: "cloudform.js"
   },
   resolve: {
     extensions: [".ts", ".js"]

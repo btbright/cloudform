@@ -1,23 +1,19 @@
-import { makeResourceError, TemplateIssue } from "../../errors";
-import { IMap, ITemplate } from "../../index";
+import { TemplateIssue } from "../../errors";
+import { ITemplate } from "../../index";
 import { IResourceProperties } from "../../specifications";
-import { isPrimitiveTypeValueValid } from "../../utilities/primitives";
 import {
   getIntrinsicError,
   getIntrinsicFunctionKey,
   getMappingError,
-  isIntrinsicFunction,
   makeInvalidFunctionUsage,
-  makeWrongFunctionUsageError
 } from "../index";
 
 export default function getFindInMapError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [mapName, primaryKeyName, secondaryKeyName] = property["Fn::FindInMap"];
-  console.log('mapName, primaryKeyName, secondaryKeyName', mapName, primaryKeyName, secondaryKeyName)
 
   const mappingError = getMappingError(
     template.Mappings,
@@ -46,6 +42,7 @@ export default function getFindInMapError(
   if (secondaryKeyNameError) {
     return secondaryKeyNameError;
   }
+  return;
 }
 
 const allowedFunctionKeys = ["Ref", "Fn::FindInMap"];
@@ -77,4 +74,5 @@ function getMappingArgumentError(
   if (intrinsicError) {
     return intrinsicError;
   }
+  return;
 }

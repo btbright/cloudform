@@ -1,14 +1,11 @@
-import { makeResourceError, TemplateIssue } from "../../errors";
-import { IMap, ITemplate } from "../../index";
+import { TemplateIssue } from "../../errors";
+import { ITemplate } from "../../index";
 import { IResourceProperties } from "../../specifications";
-import { isPrimitiveTypeValueValid } from "../../utilities/primitives";
 import {
   getConditionsError,
   getIntrinsicError,
   getIntrinsicFunctionKey,
-  isIntrinsicFunction,
-  makeInvalidFunctionUsage,
-  makeWrongFunctionUsageError
+  makeInvalidFunctionUsage
 } from "../index";
 
 const supportedFunctions = [
@@ -24,7 +21,7 @@ const supportedFunctions = [
 
 export default function getIfError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [conditionName, valueIfTrue, valueIfFalse] = property["Fn::If"];
@@ -67,4 +64,5 @@ function getIfArgumentError(
   if (intrinsicError) {
     return intrinsicError;
   }
+  return;
 }

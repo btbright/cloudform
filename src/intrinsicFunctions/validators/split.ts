@@ -21,7 +21,7 @@ const splitErrorArgsAllowedFunctions = [
 
 export default function getSplitError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [delimeter, args] = property["Fn::Split"];
@@ -48,4 +48,5 @@ export default function getSplitError(
       `The Fn::Split list of values must be a delimited string`
     );
   }
+  return;
 }

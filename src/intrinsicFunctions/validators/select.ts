@@ -23,7 +23,7 @@ const valueFunctions = [
 
 export default function getSelectError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [index, listOfObjects] = property["Fn::Select"];
@@ -73,4 +73,5 @@ export default function getSelectError(
       `The Fn::Select list of values must be a list`
     );
   }
+  return;
 }

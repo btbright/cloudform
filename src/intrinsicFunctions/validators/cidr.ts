@@ -2,7 +2,6 @@ import { TemplateIssue } from "../../errors";
 import { ITemplate } from "../../index";
 import { IResourceProperties } from "../../specifications";
 import {
-  arrayReturningFunctionKeys,
   getIntrinsicError,
   getIntrinsicFunctionKey,
   makeInvalidFunctionUsage
@@ -10,7 +9,7 @@ import {
 
 export default function getCidrError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [ipBlock, count, sizeMask] = property["Fn::Cidr"];
@@ -30,6 +29,7 @@ export default function getCidrError(
     return sizeMaskError;
   }
 
+  return;
 }
 
 const allowedFunctionKeys = ["Ref", "Fn::Select"];
@@ -60,4 +60,6 @@ function getCidrArgumentError(
   if (intrinsicError) {
     return intrinsicError;
   }
+
+  return;
 }

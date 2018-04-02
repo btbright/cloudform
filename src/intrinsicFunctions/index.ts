@@ -1,11 +1,7 @@
-import _ from "lodash";
 import { makeResourceError, TemplateIssue } from "../errors";
 import { IMap, ITemplate } from "../index";
 import { IResource } from "../resource";
-import {
-  getResourceSpecification,
-  IResourceProperties
-} from "../specifications";
+import { IResourceProperties } from "../specifications";
 
 import getBase64Error from "./validators/base64";
 import getCidrError from "./validators/cidr";
@@ -13,6 +9,7 @@ import getFindInMapError from "./validators/findInMap";
 import getGetAttError from "./validators/getAtt";
 import getGetAZsError from "./validators/getAZs";
 import getIfError from "./validators/if";
+import getJoinError from "./validators/join";
 import getOrError from "./validators/or";
 import getRefError from "./validators/ref";
 import getSelectError from "./validators/select";
@@ -39,7 +36,8 @@ export const pseudoParameters = [
   "AWS::URLSuffix"
 ];
 
-export const isPseudoParameter = parameterName => pseudoParameters.indexOf(parameterName) !== -1;
+export const isPseudoParameter = (parameterName: string) =>
+  pseudoParameters.indexOf(parameterName) !== -1;
 
 export function isArrayReturningFunction(valueToTest: any): boolean {
   const functionKey = getIntrinsicFunctionKey(valueToTest);
@@ -69,7 +67,7 @@ export function isTemplateStructureError(template: ITemplate): boolean {
 }
 
 export function getMappingError(
-  mappings: { [key: string]: IMap },
+  mappings: { [key: string]: IMap } | undefined,
   mapName: string,
   primaryKeyName: string,
   secondaryKeyName: string
@@ -80,23 +78,31 @@ export function getMappingError(
   if (!mappings[mapName]) {
     return makeMappingError(`Map does not exist: ${mapName}`);
   }
-  if (typeof primaryKeyName === "string" && !mappings[mapName][primaryKeyName]) {
+  if (
+    typeof primaryKeyName === "string" &&
+    !mappings[mapName][primaryKeyName]
+  ) {
     return makeMappingError(
       `Map '${mapName}' does not contain key: ${primaryKeyName}`
     );
   }
-  if (typeof primaryKeyName === "string" && typeof secondaryKeyName === "string" && !mappings[mapName][primaryKeyName][secondaryKeyName]) {
+  if (
+    typeof primaryKeyName === "string" &&
+    typeof secondaryKeyName === "string" &&
+    !mappings[mapName][primaryKeyName][secondaryKeyName]
+  ) {
     return makeMappingError(
       `Map '${mapName}' does not contain key: ${primaryKeyName}:${secondaryKeyName}`
     );
   }
+  return;
 }
 
 const makeMappingError = (explanation: string) =>
   makeResourceError(explanation, "InvalidMappingReference");
 
 export function getConditionsError(
-  conditions: { [key: string]: any },
+  conditions: { [key: string]: any } | undefined,
   conditionName: string
 ): TemplateIssue | undefined {
   if (!conditions) {
@@ -105,6 +111,7 @@ export function getConditionsError(
   if (!conditions[conditionName]) {
     return makeConditionError(`Condition does not exist: ${conditionName}`);
   }
+  return;
 }
 
 export const makeConditionError = (explanation: string) =>
@@ -118,10 +125,12 @@ export function doesResourceExist(
 }
 
 export function doesParameterExist(
-  parameters: { [key: string]: any },
+  parameters: { [key: string]: any } | undefined,
   parameterName: string
 ): boolean {
-  if (!parameters) {return false;}
+  if (!parameters) {
+    return false;
+  }
   return !!parameters[parameterName];
 }
 
@@ -148,7 +157,7 @@ export const makeWrongFunctionUsageError = (
   property: any,
   allowedFunctions: string[],
   functionName: string
-) => {
+): TemplateIssue | undefined => {
   const intrinsicKey = getIntrinsicFunctionKey(property);
   if (!intrinsicKey) {
     return;
@@ -160,6 +169,7 @@ export const makeWrongFunctionUsageError = (
       )}`
     );
   }
+  return;
 };
 
 export const makeInvalidResourceAttributeTypeError = (
@@ -196,13 +206,20 @@ export const makeMissingReferencedPropertyError = (
     "MissingReferencedProperty"
   );
 
-const errorFunctions = {
+type GetIntrinsicError = (
+  property: { [key: string]: any },
+  propertiesSpecification: IResourceProperties | undefined,
+  template: ITemplate
+) => TemplateIssue | undefined;
+
+const errorFunctions: { [key: string]: GetIntrinsicError } = {
   "Fn::Base64": getBase64Error,
   "Fn::Cidr": getCidrError,
   "Fn::FindInMap": getFindInMapError,
   "Fn::GetAZs": getGetAZsError,
   "Fn::GetAtt": getGetAttError,
   "Fn::If": getIfError,
+  "Fn::Join": getJoinError,
   "Fn::Or": getOrError,
   "Fn::Select": getSelectError,
   "Fn::Split": getSplitError,
@@ -212,10 +229,13 @@ const errorFunctions = {
 
 export function getIntrinsicError(
   property: any,
-  propertySpecification: IResourceProperties,
+  propertySpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const intrinsicFunctionKey = getIntrinsicFunctionKey(property);
+  if (!intrinsicFunctionKey) {
+    return;
+  }
   const errorFunction = errorFunctions[intrinsicFunctionKey];
   if (errorFunction) {
     return errorFunction(property, propertySpecification, template);

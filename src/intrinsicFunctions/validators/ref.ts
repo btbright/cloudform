@@ -12,7 +12,7 @@ import {
 
 export default function getRefError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const referencedResourceName = property.Ref;

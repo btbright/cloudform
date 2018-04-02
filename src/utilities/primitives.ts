@@ -1,11 +1,15 @@
 
 const integerStringRegex = /^[0-9]+$/;
+const decimalStringRegex = /^[0-9]+.?[0-9]*$/;
 
 export function isPrimitiveTypeValueValid(property: any, typeName: string): boolean {
   const normalizedTypeName = makeNormalizedPrimitiveTypeName(typeName);
   if (normalizedTypeName === "integer") {
     // rejects non-int numbers and accepts int strings
     return integerStringRegex.test(property.toString());
+  }
+  if (normalizedTypeName === "double" || normalizedTypeName === "long"){
+    return decimalStringRegex.test(property.toString());
   }
   if (normalizedTypeName === "boolean") {
     return (
@@ -23,8 +27,6 @@ export function makeNormalizedPrimitiveTypeName(typeName: string): string {
   }
   const loweredTypeName = typeName.toLowerCase();
   switch (loweredTypeName) {
-    case "long":
-    case "double":
     case "timestamp":
       return "number";
     case "json":

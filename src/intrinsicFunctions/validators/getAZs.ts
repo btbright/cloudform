@@ -12,7 +12,7 @@ import {
 
 export default function getGetAZsError(
     property: { [key: string]: any },
-    propertiesSpecification: IResourceProperties,
+    propertiesSpecification: IResourceProperties | undefined,
     template: ITemplate
   ): TemplateIssue | undefined {
     const region = property["Fn::GetAZs"];
@@ -33,4 +33,5 @@ export default function getGetAZsError(
         `The Fn::GetAZs region name must be a string`
       );
     }
+    return;
   }

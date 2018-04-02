@@ -10,7 +10,7 @@ import {
 
 export default function getBase64Error(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const baseString = property["Fn::Base64"];
@@ -29,4 +29,5 @@ export default function getBase64Error(
   if (typeof baseString !== "string") {
     return makeInvalidFunctionUsage(`The Fn::Base64 delimiter must be a string`);
   }
+  return;
 }

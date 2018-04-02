@@ -496,7 +496,7 @@
                 "         --resource LaunchConfig ",
                 "         --configsets wordpress_install ",
                 "         --region ",
-                { "Ref": "AWS::Region" },
+                { "Ref": "NotReal" },
                 "\n",
 
                 "/opt/aws/bin/cfn-signal -e $? ",
@@ -592,7 +592,7 @@
       "Value": {
         "Fn::Join": [
           "",
-          ["http://", { "Fn::GetAtt": ["ElasticLoadBalancer", "DNSName"] }]
+          ["http://", { "Fn::GetAtt": ["ElasticLoadBalancer", "Nope"] }]
         ]
       },
       "Description": "WordPress website"

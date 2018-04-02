@@ -9,6 +9,5 @@ test("validates a valid template without errors", () => {
 
 test("validates a valid template with errors", () => {
     const errors = getTemplateIssues(errorWordpressTemplate);
-    console.log(errors)
-    expect(errors.length).toBe(2);
+    expect(errors.length).toBe(3);
 });

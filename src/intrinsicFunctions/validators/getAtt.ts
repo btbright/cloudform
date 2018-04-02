@@ -1,7 +1,6 @@
 import _ from "lodash";
-import { makeResourceError, TemplateIssue } from "../../errors";
+import { TemplateIssue } from "../../errors";
 import { ITemplate } from "../../index";
-import { IResource } from "../../resource";
 import {
   getResourceSpecification,
   IResourceProperties
@@ -19,7 +18,7 @@ import {
 
 export default function getGetAttError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [resourceName, propertyName] = property["Fn::GetAtt"];
@@ -73,7 +72,7 @@ export default function getGetAttError(
     ) {
       return makeInvalidResourceAttributeTypeError(
         resourceType,
-        propertiesSpecification.PrimitiveType,
+        propertiesSpecification.PrimitiveType || propertiesSpecification.PrimitiveItemType || "unknown",
         attributeSpecification.PrimitiveType
       );
     }

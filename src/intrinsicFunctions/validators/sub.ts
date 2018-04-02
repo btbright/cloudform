@@ -3,9 +3,7 @@ import { ITemplate } from "../../index";
 import { IResourceProperties } from "../../specifications";
 import {
   getIntrinsicError,
-  isIntrinsicFunction,
   makeInvalidFunctionUsage,
-  makeMissingReferencedResourceError,
   makeWrongFunctionUsageError
 } from "../index";
 
@@ -22,7 +20,7 @@ const subErrorArgsAllowedFunctions = [
 
 export default function getSubError(
   property: { [key: string]: any },
-  propertiesSpecification: IResourceProperties,
+  propertiesSpecification: IResourceProperties | undefined,
   template: ITemplate
 ): TemplateIssue | undefined {
   const [baseString, replacements] = property["Fn::Sub"];
@@ -56,4 +54,5 @@ export default function getSubError(
       return replacementError;
     }
   }
+  return;
 }
